@@ -1,4 +1,4 @@
-# PHANTOM — Atelier & Fine Goods
+# PHANTOM 
 
 An ultra-luxury, editorial e-commerce platform and administrative console engineered with React 19, TypeScript, Tailwind CSS, Express, Prisma ORM, and PostgreSQL.
 
