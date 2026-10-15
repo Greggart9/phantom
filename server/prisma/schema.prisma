@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model User {
+  id                   String       @id @default(uuid())
+  email                String       @unique
+  passwordHash         String?
+  fullName             String
+  firstName            String?
+  lastName             String?
+  phone                String?
+  address              String?
+  apartment            String?
+  city                 String?
+  postcode             String?
+  country              String?
+  role                 Role         @default(CUSTOMER)
+  googleId             String?      @unique
+  magicToken           String?
+  magicTokenExpires    DateTime?
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+  passwordChangeCode   String?
+  passwordChangeExpires DateTime?
+  orders               Order[]
+  reviews              Review[]
+  cart                 Cart?
+  wishlist             WishlistItem[]
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@map("users")
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+
+  @@map("categories")
+}
+
+model Collection {
+  id          String              @id @default(uuid())
+  name        String              @unique
+  slug        String              @unique
+  description String?
+  coverImage  String?
+  products    ProductCollection[]
+  createdAt   DateTime            @default(now())
+
+  @@map("collections")
+}
+
+model Product {
+  id              String              @id @default(uuid())
+  title           String
+  slug            String              @unique
+  description     String
+  price           Decimal             @db.Decimal(10, 2)
+  originalPrice   Decimal?            @db.Decimal(10, 2)
+  badge           String?             // e.g. "NEW ARRIVAL", "ARCHIVE", "LIMITED EDITION"
+  stockQuantity   Int                 @default(0) // 0 = Sold Out, > 0 = in stock
+  isPublished     Boolean             @default(true)
+  images          String[]            // Array of image URLs (min 3 recommended)
+  colors          Json?               // [{ name: "Obsidian", hex: "#0a0a0a", inStock: true }]
+  sizes           String[]            @default([]) // ["XS", "S", "M", "L", "XL"]
+  materials       String?             @db.Text
+  care            String?             @db.Text
+  shippingInfo    String?             @db.Text
+  storyParagraphs String[]            @default([])
+  specifications  Json?               // [{ label: "Origin", value: "Biella, Italy" }]
+  categoryId      String
+  category        Category            @relation(fields: [categoryId], references: [id])
+  collections     ProductCollection[]
+  orderItems      OrderItem[]
+  reviews         Review[]
+  cartItems       CartItem[]
+  wishlistItems   WishlistItem[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@map("products")
+}
+
+model ProductCollection {
+  productId    String
+  collectionId String
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@id([productId, collectionId])
+  @@map("product_collections")
+}
+
+model JournalPost {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  excerpt     String?
+  content     String   @db.Text
+  coverImage  String?
+  author      String?  @default("Phantom Atelier")
+  readTime    String?  @default("5 min read")
+  category    String?  @default("EXHIBITION")
+  isPublished Boolean  @default(true)
+  publishedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("journal_posts")
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  orderNumber     String      @unique
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  totalAmount     Decimal     @db.Decimal(10, 2)
+  status          OrderStatus @default(PENDING)
+  paymentIntentId String?
+  trackingNumber  String?
+  carrier         String?     @default("DHL Express")
+  shippingAddress Json
+  orderItems      OrderItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int      @default(1)
+  unitPrice Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+
+  @@map("order_items")
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  rating     Int      @default(5)
+  content    String   @db.Text
+  isApproved Boolean  @default(true)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("reviews")
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("carts")
+}
+
+model CartItem {
+  id            String   @id @default(uuid())
+  cartId        String
+  cart          Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productSlug   String?
+  productTitle  String
+  productPrice  Decimal  @db.Decimal(10, 2)
+  productImage  String
+  category      String?
+  selectedSize  String?
+  selectedColor String?
+  quantity      Int      @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("cart_items")
+}
+
+model WishlistItem {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productSlug  String?
+  productTitle String
+  productPrice Decimal  @db.Decimal(10, 2)
+  productImage String
+  category     String?
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@map("wishlist_items")
+}
+
