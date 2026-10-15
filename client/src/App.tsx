@@ -20,6 +20,7 @@ const PrivacyPolicyPage = lazy(() => import('./pages/privacy/page'));
 const TermsOfServicePage = lazy(() => import('./pages/terms/page'));
 const ContactPage = lazy(() => import('./pages/contact/page'));
 const VerifyMagicLinkPage = lazy(() => import('./pages/auth/VerifyMagicLinkPage'));
+const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const ProductDetailPage = lazy(() => import('./pages/product/page'));
 const OrdersPage = lazy(() => import('./pages/orders/page'));
 const ProfilePage = lazy(() => import('./pages/profile/page'));
@@ -94,6 +95,8 @@ function App() {
                   <Route path="/privacy" element={<PrivacyPolicyPage />} />
                   <Route path="/terms" element={<TermsOfServicePage />} />
                   <Route path="/auth/verify-magic-link" element={<VerifyMagicLinkPage />} />
+                  <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
+                  <Route path="/reset-password" element={<ResetPasswordPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </Layout>
