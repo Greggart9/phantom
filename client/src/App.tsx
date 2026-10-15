@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import Layout from './components/ui/Layout';
 import Loading from './components/ui/loading';
 import ScrollToTop from './components/ui/ScrollToTop';
@@ -41,6 +42,7 @@ function App() {
   return (
     <>
       <ScrollToTop />
+      <Analytics />
       <Suspense fallback={<Loading message="Accessing Phantom..." fullScreen={true} />}>
         <Routes>
           {/* Admin Suite (No public navbar/footer; protected by AdminGuard) */}
