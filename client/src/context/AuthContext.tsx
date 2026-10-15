@@ -59,8 +59,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// In development, backend runs on port 5000
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// In development, backend runs on port 5000; in production, use relative /api
+const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(() => {
