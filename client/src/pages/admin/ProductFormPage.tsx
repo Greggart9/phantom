@@ -80,9 +80,10 @@ export default function ProductFormPage() {
   const [storyParagraphs, setStoryParagraphs] = useState<string[]>([
     'Tailored in northern Italy from double-faced virgin wool, structured with architectural precision and finished with hand-set hardware.'
   ]);
+  const [hasRepairs, setHasRepairs] = useState<boolean>(true);
+  const [repairsText, setRepairsText] = useState<string>('Free for two years');
   const [specifications, setSpecifications] = useState<Specification[]>([
-    { label: 'Origin', value: 'Biella, Italy' },
-    { label: 'Fabric Weight', value: '460 GSM' }
+    { label: 'Origin', value: 'Portugal' }
   ]);
 
   // Master options
@@ -146,7 +147,27 @@ export default function ProductFormPage() {
               setStoryParagraphs(current.storyParagraphs);
             }
             if (Array.isArray(current.specifications) && current.specifications.length > 0) {
-              setSpecifications(current.specifications);
+              const repairItem = current.specifications.find(
+                (s: any) => (s.label || s.key || '').toLowerCase() === 'repairs'
+              );
+              if (repairItem) {
+                if (
+                  repairItem.value === 'none' ||
+                  repairItem.value === 'false' ||
+                  repairItem.value === 'no'
+                ) {
+                  setHasRepairs(false);
+                } else {
+                  setHasRepairs(true);
+                  setRepairsText(repairItem.value || 'Free for two years');
+                }
+              } else {
+                setHasRepairs(false);
+              }
+              const nonRepairSpecs = current.specifications.filter(
+                (s: any) => (s.label || s.key || '').toLowerCase() !== 'repairs'
+              );
+              setSpecifications(nonRepairSpecs);
             }
           }
         } else if (catRes.data?.categories?.length > 0) {
@@ -268,6 +289,21 @@ export default function ProductFormPage() {
       return;
     }
 
+    const finalSpecs = specifications.filter(
+      (s) => s.label.trim() && s.value.trim() && s.label.toLowerCase() !== 'repairs'
+    );
+    if (hasRepairs) {
+      finalSpecs.push({
+        label: 'Repairs',
+        value: repairsText.trim() || 'Free for two years'
+      });
+    } else {
+      finalSpecs.push({
+        label: 'Repairs',
+        value: 'none'
+      });
+    }
+
     const payload = {
       title: title.trim(),
       description: description.trim() || title.trim(),
@@ -284,7 +320,7 @@ export default function ProductFormPage() {
       care: care.trim() || null,
       shippingInfo: shippingInfo.trim() || null,
       storyParagraphs: storyParagraphs.filter((p) => p.trim().length > 0),
-      specifications: specifications.filter((s) => s.label.trim() && s.value.trim()),
+      specifications: finalSpecs,
       isPublished: true
     };
 
@@ -909,6 +945,44 @@ export default function ProductFormPage() {
                   </button>
                 </div>
               ))}
+            </div>
+
+            {/* In-House 2-Year Repair Guarantee */}
+            <div className="pt-3.5 border-t border-neutral-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-neutral-200 block">
+                    In-House Repair Guarantee
+                  </span>
+                  <span className="text-[11px] text-neutral-400">
+                    Displays the "REPAIRS" row in specifications.
+                  </span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasRepairs}
+                    onChange={(e) => setHasRepairs(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
+                </label>
+              </div>
+
+              {hasRepairs && (
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">
+                    Repair Terms Text
+                  </label>
+                  <input
+                    type="text"
+                    value={repairsText}
+                    onChange={(e) => setRepairsText(e.target.value)}
+                    placeholder="Free for two years"
+                    className="w-full px-2.5 py-1.5 bg-black border border-neutral-800 rounded text-xs text-white focus:outline-none focus:border-neutral-600 font-mono"
+                  />
+                </div>
+              )}
             </div>
           </div>
 

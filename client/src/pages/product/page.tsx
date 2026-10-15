@@ -24,7 +24,6 @@ import {
   ALL_PRODUCTS,
   getProductBySlug,
   getProductStory,
-  getProductSpecifications,
   YOU_MAY_ALSO_LIKE_PRODUCTS
 } from '../../data/products';
 import ProductCard from '../../components/ui/ProductCard';
@@ -120,10 +119,113 @@ export default function ProductDetailPage() {
       ? product.storyParagraphs
       : getProductStory(product);
 
-  const specEntries =
-    product.specifications && Array.isArray(product.specifications) && product.specifications.length > 0
-      ? product.specifications.map((s: any) => [s.label || s.key, s.value])
-      : getProductSpecifications(product);
+  // Compute full luxury specifications adhering to Phantom design standards:
+  // 1. MATERIAL
+  // 2. COLOURWAY (Must be the first color added in the color list of available colors)
+  // 3. CATEGORY
+  // 4. MADE IN
+  // 5. REPAIRS (Included by default or configured in admin; omitted if disabled)
+  // 6. Additional custom specifications
+  const computeProductSpecs = (): [string, string][] => {
+    const list: [string, string][] = [];
+
+    // Parse raw specifications array or object
+    let rawSpecs: Array<{ label: string; value: string }> = [];
+    if (Array.isArray(product.specifications)) {
+      rawSpecs = product.specifications.map((s: any) => ({
+        label: String(s.label || s.key || '').trim(),
+        value: String(s.value || '').trim()
+      }));
+    } else if (product.specifications && typeof product.specifications === 'object') {
+      rawSpecs = Object.entries(product.specifications).map(([k, v]) => ({
+        label: k.trim(),
+        value: String(v || '').trim()
+      }));
+    }
+
+    const findSpecValue = (name: string) => {
+      const match = rawSpecs.find((s) => s.label.toLowerCase() === name.toLowerCase());
+      return match?.value;
+    };
+
+    // 1. MATERIAL
+    const materialVal =
+      findSpecValue('material') ||
+      product.materials ||
+      '78% virgin wool, 22% alpaca';
+    list.push(['MATERIAL', materialVal]);
+
+    // 2. COLOURWAY: The first color that was added in the color list of available colors
+    let firstColorName = '';
+    if (Array.isArray(product.colors) && product.colors.length > 0) {
+      const c0 = product.colors[0];
+      if (typeof c0 === 'string') firstColorName = c0;
+      else if (c0 && typeof c0 === 'object' && c0.name) firstColorName = c0.name;
+    }
+    const colourwayVal =
+      firstColorName ||
+      findSpecValue('colourway') ||
+      findSpecValue('colorway') ||
+      'Undyed Camel';
+    list.push(['COLOURWAY', colourwayVal]);
+
+    // 3. CATEGORY (Formatted as title-case)
+    const rawCategory =
+      findSpecValue('category') ||
+      (typeof product.category === 'object' && product.category !== null
+        ? product.category.name
+        : product.category) ||
+      'Outerwear';
+    const formattedCategory =
+      rawCategory.length > 0
+        ? rawCategory.charAt(0).toUpperCase() + rawCategory.slice(1).toLowerCase()
+        : 'Outerwear';
+    list.push(['CATEGORY', formattedCategory]);
+
+    // 4. MADE IN (Origin)
+    const originVal =
+      findSpecValue('made in') ||
+      findSpecValue('origin') ||
+      findSpecValue('made_in') ||
+      product.madeIn ||
+      'Portugal';
+    list.push(['MADE IN', originVal]);
+
+    // 5. REPAIRS (Optional or general based on admin setting)
+    const repairsSpec = findSpecValue('repairs') || findSpecValue('repair');
+    if (repairsSpec !== undefined) {
+      if (
+        repairsSpec.toLowerCase() !== 'none' &&
+        repairsSpec.toLowerCase() !== 'false' &&
+        repairsSpec.toLowerCase() !== 'no' &&
+        repairsSpec.trim() !== ''
+      ) {
+        list.push(['REPAIRS', repairsSpec]);
+      }
+    } else {
+      // General default guarantee for fine apparel
+      list.push(['REPAIRS', 'Free for two years']);
+    }
+
+    // 6. Additional custom specifications from Admin
+    const standardKeys = [
+      'material', 'materials',
+      'colourway', 'colorway', 'color', 'colour',
+      'category',
+      'made in', 'origin', 'made_in',
+      'repairs', 'repair'
+    ];
+    rawSpecs.forEach((s) => {
+      if (s.label && !standardKeys.includes(s.label.toLowerCase()) && s.value) {
+        list.push([s.label.toUpperCase(), s.value]);
+      }
+    });
+
+    return list;
+  };
+
+  const specEntries = computeProductSpecs();
+  const hasRepairsGuarantee = specEntries.some(([k]) => k === 'REPAIRS');
 
   // Component states
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -687,10 +789,12 @@ export default function ProductDetailPage() {
                 <RotateCcw className="w-4 h-4 text-neutral-400 shrink-0 stroke-[1.8]" />
                 <span>Thirty days to change your mind</span>
               </div>
-              <div className="flex items-center gap-3">
-                <ShieldCheck className="w-4 h-4 text-neutral-400 shrink-0 stroke-[1.8]" />
-                <span>Two years of free repairs, in-house</span>
-              </div>
+              {hasRepairsGuarantee && (
+                <div className="flex items-center gap-3">
+                  <ShieldCheck className="w-4 h-4 text-neutral-400 shrink-0 stroke-[1.8]" />
+                  <span>Two years of free repairs, in-house</span>
+                </div>
+              )}
             </div>
 
             {/* Divider Line */}
@@ -803,15 +907,15 @@ export default function ProductDetailPage() {
       {/* ========================================================= */}
       {/* SECTION: ABOUT THIS PIECE & SPECIFICATION                 */}
       {/* ========================================================= */}
-      <section className="w-full bg-[#181716] border-y border-neutral-800/80 py-16 sm:py-20 lg:py-24">
+      <section className="w-full bg-[#181716] border-y border-neutral-800/80 py-20 sm:py-28 lg:py-32">
         <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-24 items-start">
             {/* Left Column: About This Piece */}
-            <div className="lg:col-span-6 space-y-6">
+            <div className="lg:col-span-6 space-y-6 sm:space-y-8">
               <span className="text-[12px] font-bold text-[#cf5230] tracking-[0.24em] uppercase block">
                 ABOUT THIS PIECE
               </span>
-              <div className="space-y-6 text-[15px] sm:text-base text-[#d6d3cd] font-normal leading-[1.8] max-w-xl">
+              <div className="space-y-6 sm:space-y-8 text-base sm:text-[18px] lg:text-[19px] text-[#dedbd4] font-normal leading-[1.75] max-w-xl">
                 {storyParagraphs.map((para: string, i: number) => (
                   <p key={i}>{para}</p>
                 ))}
@@ -819,17 +923,17 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Right Column: Specification */}
-            <div className="lg:col-span-6 space-y-6">
+            <div className="lg:col-span-6 space-y-6 sm:space-y-8">
               <span className="text-[12px] font-bold text-[#cf5230] tracking-[0.24em] uppercase block">
                 SPECIFICATION
               </span>
               <div className="border-t border-b border-neutral-800/80 divide-y divide-neutral-800/80">
                 {specEntries.map(([label, val]: [string, any]) => (
-                  <div key={label} className="py-4.5 flex items-baseline justify-between text-xs sm:text-sm">
-                    <span className="text-[11px] font-medium tracking-[0.2em] uppercase text-neutral-400">
+                  <div key={label} className="py-4.5 sm:py-5 grid grid-cols-12 items-baseline text-xs sm:text-sm">
+                    <span className="col-span-4 sm:col-span-3 text-[11px] font-medium tracking-[0.2em] uppercase text-neutral-400">
                       {label}
                     </span>
-                    <span className="text-sm font-semibold text-white text-right">
+                    <span className="col-span-8 sm:col-span-9 text-sm sm:text-base font-normal text-white pl-2 sm:pl-4">
                       {val}
                     </span>
                   </div>

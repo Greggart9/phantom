@@ -744,10 +744,14 @@ export function getProductSpecifications(product: ProductDetailItem | any): [str
     ? (product.category.name || 'Outwear')
     : (typeof product.category === 'string' && product.category ? product.category : 'Outwear');
 
+  const firstColor = Array.isArray(product.colors) && product.colors.length > 0
+    ? (typeof product.colors[0] === 'string' ? product.colors[0] : product.colors[0]?.name)
+    : 'Undyed Camel';
+
   // Graceful dynamic defaults based on product properties
   return [
-    ['MATERIAL', product.materials || '100% natural organic blend'],
-    ['COLOURWAY', Array.isArray(product.colors) && product.colors[0] ? product.colors[0].name : 'Natural Tone'],
+    ['MATERIAL', product.materials || '78% virgin wool, 22% alpaca'],
+    ['COLOURWAY', firstColor || 'Undyed Camel'],
     ['CATEGORY', rawCat.charAt(0).toUpperCase() + rawCat.slice(1).toLowerCase()],
     ['MADE IN', 'Portugal'],
     ['REPAIRS', 'Free for two years']
