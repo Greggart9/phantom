@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Clock, ArrowRight, CheckCircle2 } from 'lucide-react';
+import SEO from '../../components/common/SEO';
 
 export default function ContactPage() {
   const [firstName, setFirstName] = useState('');
@@ -32,6 +33,10 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-[#11100f] text-[#f4f2ee] select-none py-14 sm:py-20 lg:py-24 px-6 sm:px-10 lg:px-16 selection:bg-neutral-800 selection:text-white">
+      <SEO
+        title="Concierge & Inquiries"
+        description="Get in touch with Phantom Atelier client services for bespoke inquiries, orders, and studio visits."
+      />
       <div className="max-w-[1320px] mx-auto">
         {/* ========================================================= */}
         {/* TOP HEADER: Eyebrow + Headline & Description               */}

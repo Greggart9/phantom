@@ -66,5 +66,7 @@ export const googleAuthSchema = z.object({
   credential: z.string().optional(),
   email: z.string().email().optional(),
   fullName: z.string().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
   googleId: z.string().optional()
 });

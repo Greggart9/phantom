@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, ArrowUpRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import SEO from '../../components/common/SEO';
 
 interface FaqItem {
   question: string;
@@ -112,6 +113,24 @@ export default function FaqPage() {
 
   return (
     <div className="min-h-screen bg-[#11100f] text-[#f4f2ee] select-none selection:bg-neutral-800 selection:text-white">
+      <SEO
+        title="Atelier FAQ & Client Care"
+        description="Answers on sizing, materials, two-year repair guarantee, worldwide delivery, and order tracking."
+        schema={{
+          '@context': 'https://schema.org',
+          '@type': 'FAQPage',
+          mainEntity: FAQ_DATA.flatMap((cat) =>
+            cat.items.map((item) => ({
+              '@type': 'Question',
+              name: item.question,
+              acceptedAnswer: {
+                '@type': 'Answer',
+                text: item.answer
+              }
+            }))
+          )
+        }}
+      />
       <div className="max-w-[1320px] mx-auto pt-14 sm:pt-20 lg:pt-24 pb-16 sm:pb-24 px-6 sm:px-10 lg:px-16">
         {/* ========================================================= */}
         {/* TOP HEADER: Eyebrow + Title & Intro Text                  */}

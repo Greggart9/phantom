@@ -52,7 +52,14 @@ interface AuthContextType {
   confirmPasswordChange: (code: string, newPassword: string, confirmPassword?: string) => Promise<{ success: boolean; message: string }>;
   sendMagicLink: (email: string) => Promise<{ success: boolean; message: string; previewLink?: string }>;
   verifyMagicLink: (token: string) => Promise<{ success: boolean; message: string }>;
-  loginWithGoogle: (payload: { email?: string; fullName?: string; googleId?: string; credential?: string }) => Promise<{ success: boolean; message: string }>;
+  loginWithGoogle: (payload: {
+    email?: string;
+    fullName?: string;
+    firstName?: string;
+    lastName?: string;
+    googleId?: string;
+    credential?: string;
+  }) => Promise<{ success: boolean; message: string }>;
   requestPasswordReset: (email: string) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;
 }
@@ -95,7 +102,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const openProfileModal = () => setIsProfileModalOpen(true);
   const closeProfileModal = () => setIsProfileModalOpen(false);
 
-  const updateProfile = async (data: { fullName?: string; country?: string }) => {
+  const updateProfile = async (data: {
+    fullName?: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    address?: string;
+    apartment?: string;
+    city?: string;
+    postcode?: string;
+    country?: string;
+  }) => {
     try {
       const res = await fetch(`${API_BASE}/auth/me`, {
         method: 'PUT',
@@ -276,7 +293,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const loginWithGoogle = async (payload: { email?: string; fullName?: string; googleId?: string; credential?: string }) => {
+  const loginWithGoogle = async (payload: {
+    email?: string;
+    fullName?: string;
+    firstName?: string;
+    lastName?: string;
+    googleId?: string;
+    credential?: string;
+  }) => {
     try {
       const res = await fetch(`${API_BASE}/auth/google`, {
         method: 'POST',
@@ -325,6 +349,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setUser(null);
       localStorage.removeItem('phantom_user');
+      localStorage.removeItem('phantom_cart');
+      localStorage.removeItem('phantom_wishlist_items');
+      localStorage.removeItem('phantom_orders');
       closeProfileModal();
     }
   };

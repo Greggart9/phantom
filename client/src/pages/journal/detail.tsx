@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { api } from '../../services/api';
 import { JOURNAL_ARTICLES, type JournalArticleItem } from '../../data/journalData';
+import SEO from '../../components/common/SEO';
 
 export default function JournalDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -159,6 +160,27 @@ export default function JournalDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#121110] text-[#f4f2ee] selection:bg-neutral-800 selection:text-white">
+      <SEO
+        title={article.title}
+        description={article.excerpt || `${article.title} — an essay from Phantom Studio.`}
+        image={article.imageUrl}
+        type="article"
+        schema={{
+          '@context': 'https://schema.org',
+          '@type': 'Article',
+          headline: article.title,
+          description: article.excerpt,
+          image: article.imageUrl ? [article.imageUrl] : undefined,
+          author: {
+            '@type': 'Person',
+            name: article.author || 'Phantom Atelier'
+          },
+          publisher: {
+            '@type': 'Organization',
+            name: 'PHANTOM'
+          }
+        }}
+      />
       <main className="pt-12 sm:pt-16 lg:pt-20 pb-24 sm:pb-32 px-6 sm:px-10 lg:px-12 select-none">
         <div className="max-w-[1320px] mx-auto">
           {/* 1 & 2. Centered Top Navigation & Header Information */}

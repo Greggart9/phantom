@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import SEO from '../../components/common/SEO';
 
 interface PrivacySection {
   title: string;
@@ -53,6 +54,10 @@ export default function PrivacyPolicyPage() {
 
   return (
     <div className="min-h-screen bg-[#11100f] text-[#f4f2ee] select-none py-14 sm:py-20 lg:py-24 px-6 sm:px-10 lg:px-16 selection:bg-neutral-800 selection:text-white">
+      <SEO
+        title="Privacy Policy"
+        description="Phantom Studio privacy policy, GDPR compliance, and how we handle customer personal data."
+      />
       <div className="max-w-[1320px] mx-auto">
         {/* ========================================================= */}
         {/* TOP HEADER: Left-aligned to the screen / container        */}

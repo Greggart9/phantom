@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, Check, ArrowRight, MapPin, Edit3 } from 'lucide-react';
+import { Lock, Check, ArrowRight, Edit3 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { useAuth } from '../../context/AuthContext';
 import RecommendedProducts from '../../components/section/RecommendedProducts';
@@ -35,7 +35,7 @@ const DELIVERY_METHODS: DeliveryMethod[] = [
 
 export default function CheckoutPage() {
   const { cart, cartSubtotal, createOrder } = useStore();
-  const { user, isAuthenticated, openAuthModal } = useAuth();
+  const { user, isAuthenticated, openAuthModal, updateProfile } = useAuth();
   const navigate = useNavigate();
 
   // Automatic auth modal trigger if unauthenticated user tries to view checkout
@@ -50,6 +50,48 @@ export default function CheckoutPage() {
 
   // Remember details checkbox
   const [rememberDetails, setRememberDetails] = useState<boolean>(true);
+
+  // Editable Shipping Form State
+  const [shippingFirstName, setShippingFirstName] = useState('');
+  const [shippingLastName, setShippingLastName] = useState('');
+  const [shippingEmail, setShippingEmail] = useState('');
+  const [shippingPhone, setShippingPhone] = useState('');
+  const [shippingAddress, setShippingAddress] = useState('');
+  const [shippingApartment, setShippingApartment] = useState('');
+  const [shippingCity, setShippingCity] = useState('');
+  const [shippingPostcode, setShippingPostcode] = useState('');
+  const [shippingCountry, setShippingCountry] = useState('Portugal');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sync initial address values from logged in user
+  useEffect(() => {
+    if (user) {
+      if (user.firstName) {
+        setShippingFirstName(user.firstName);
+      } else if (user.fullName) {
+        const parts = user.fullName.trim().split(' ');
+        setShippingFirstName(parts[0] || '');
+      }
+
+      if (user.lastName) {
+        setShippingLastName(user.lastName);
+      } else if (user.fullName) {
+        const parts = user.fullName.trim().split(' ');
+        if (parts.length > 1) {
+          setShippingLastName(parts.slice(1).join(' '));
+        }
+      }
+
+      if (user.email) setShippingEmail(user.email);
+      if (user.phone) setShippingPhone(user.phone);
+      if (user.address) setShippingAddress(user.address);
+      if (user.apartment) setShippingApartment(user.apartment);
+      if (user.city) setShippingCity(user.city);
+      if (user.postcode) setShippingPostcode(user.postcode);
+      if (user.country) setShippingCountry(user.country);
+    }
+  }, [user]);
 
   // Promo Code State
   const [promoCode, setPromoCode] = useState('');
@@ -74,8 +116,10 @@ export default function CheckoutPage() {
     }
   };
 
-  const handleCompleteOrder = (e: React.FormEvent) => {
+  const handleCompleteOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
     if (!isAuthenticated) {
       openAuthModal('login', 'Please sign in or create an account to complete your checkout.');
       return;
@@ -85,25 +129,73 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Place the confirmed, paid order
-    const selectedDelivery = DELIVERY_METHODS.find((m) => m.id === selectedMethod);
-    createOrder({
-      items: cart,
-      shippingAddress: {
-        firstName: user?.firstName || user?.fullName?.split(' ')[0] || 'Phantom',
-        lastName: user?.lastName || user?.fullName?.split(' ').slice(1).join(' ') || 'Collector',
-        address: user?.address || 'Primary Residence',
-        apartment: user?.apartment || '',
-        city: user?.city || 'Lisboa',
-        postcode: user?.postcode || '',
-        country: user?.country || 'Portugal'
-      },
-      deliveryMethod: selectedDelivery?.name,
-      totalAmount: finalTotal
-    });
+    const cleanFirst = shippingFirstName.trim();
+    const cleanLast = shippingLastName.trim();
+    const cleanAddr = shippingAddress.trim();
+    const cleanCity = shippingCity.trim();
+    const cleanPostcode = shippingPostcode.trim();
 
-    // Navigate to Your Orders page
-    navigate('/account/orders');
+    if (!cleanFirst) {
+      setFormError('Please enter your first name.');
+      return;
+    }
+    if (!cleanLast) {
+      setFormError('Please enter your last name.');
+      return;
+    }
+    if (!cleanAddr) {
+      setFormError('Please enter your street address.');
+      return;
+    }
+    if (!cleanCity) {
+      setFormError('Please enter your city.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const selectedDelivery = DELIVERY_METHODS.find((m) => m.id === selectedMethod);
+
+      const addressData = {
+        firstName: cleanFirst,
+        lastName: cleanLast,
+        email: shippingEmail.trim() || user?.email,
+        phone: shippingPhone.trim(),
+        address: cleanAddr,
+        apartment: shippingApartment.trim(),
+        city: cleanCity,
+        postcode: cleanPostcode,
+        country: shippingCountry.trim() || 'Portugal'
+      };
+
+      // Optionally remember details to user's database profile
+      if (rememberDetails) {
+        updateProfile({
+          firstName: cleanFirst,
+          lastName: cleanLast,
+          phone: shippingPhone.trim(),
+          address: cleanAddr,
+          apartment: shippingApartment.trim(),
+          city: cleanCity,
+          postcode: cleanPostcode,
+          country: shippingCountry.trim() || 'Portugal'
+        }).catch(() => {});
+      }
+
+      await createOrder({
+        items: cart,
+        shippingAddress: addressData,
+        deliveryMethod: selectedDelivery?.name,
+        totalAmount: finalTotal
+      });
+
+      // Navigate to Your Orders page
+      navigate('/account/orders');
+    } catch (err: any) {
+      setFormError('An error occurred while confirming your order. Please retry.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // =========================================================================
@@ -160,7 +252,7 @@ export default function CheckoutPage() {
           {/* ========================================================= */}
           <div className="lg:col-span-7 space-y-12 sm:space-y-14">
             <form onSubmit={handleCompleteOrder} className="space-y-12 sm:space-y-14">
-              {/* SECTION 01: PHANTOM DESTINATION SUMMARY */}
+              {/* SECTION 01: PHANTOM DESTINATION */}
               <section aria-labelledby="destination-heading" className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -176,54 +268,150 @@ export default function CheckoutPage() {
                     className="text-xs text-orange-400 hover:text-orange-300 font-semibold tracking-wider uppercase underline underline-offset-4 flex items-center gap-1.5 transition-colors"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
-                    <span>Edit in Profile</span>
+                    <span>Manage in Profile</span>
                   </Link>
                 </div>
 
-                <div className="p-5 sm:p-6 bg-[#161514] border border-neutral-800 space-y-3">
-                  <div className="flex items-start justify-between">
+                {formError && (
+                  <div className="p-3 bg-red-950/40 border border-red-800/80 text-red-200 text-xs">
+                    {formError}
+                  </div>
+                )}
+
+                <div className="p-5 sm:p-6 bg-[#161514] border border-neutral-800 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm font-bold text-white tracking-wide">
-                        {user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Valued Collector'}
-                      </p>
-                      <p className="text-xs text-neutral-400 mt-0.5 font-normal">
-                        {user?.email}
-                      </p>
-                      {user?.phone && (
-                        <p className="text-xs text-neutral-400 mt-0.5">
-                          {user?.phone}
-                        </p>
-                      )}
+                      <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-400 font-semibold block mb-1.5">
+                        First Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={shippingFirstName}
+                        onChange={(e) => setShippingFirstName(e.target.value)}
+                        placeholder="e.g. Alexander"
+                        className="w-full px-3.5 py-2.5 bg-[#121110] border border-neutral-800 rounded-none text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-500"
+                      />
                     </div>
-                    <div className="p-2 bg-neutral-900 border border-neutral-800 rounded text-orange-500">
-                      <MapPin className="w-4 h-4" />
+                    <div>
+                      <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-400 font-semibold block mb-1.5">
+                        Last Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={shippingLastName}
+                        onChange={(e) => setShippingLastName(e.target.value)}
+                        placeholder="e.g. Vance"
+                        className="w-full px-3.5 py-2.5 bg-[#121110] border border-neutral-800 rounded-none text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-500"
+                      />
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-neutral-800/80">
-                    <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-500 font-semibold mb-1">
-                      Shipping Address
-                    </p>
-                    {user?.address ? (
-                      <p className="text-xs text-neutral-200 font-medium leading-relaxed">
-                        {user.address}
-                        {user.apartment ? `, ${user.apartment}` : ''}
-                        <br />
-                        {[user.city, user.postcode, user.country].filter(Boolean).join(', ')}
-                      </p>
-                    ) : (
-                      <div className="flex items-center justify-between py-1">
-                        <span className="text-xs text-neutral-400 italic">
-                          No delivery address registered yet in profile.
-                        </span>
-                        <Link
-                          to="/profile"
-                          className="text-xs text-orange-400 hover:text-orange-300 font-semibold underline"
-                        >
-                          Add Address &rarr;
-                        </Link>
-                      </div>
-                    )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-400 font-semibold block mb-1.5">
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={shippingEmail}
+                        onChange={(e) => setShippingEmail(e.target.value)}
+                        placeholder="client@phantom.studio"
+                        className="w-full px-3.5 py-2.5 bg-[#121110] border border-neutral-800 rounded-none text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-400 font-semibold block mb-1.5">
+                        Contact Phone
+                      </label>
+                      <input
+                        type="tel"
+                        value={shippingPhone}
+                        onChange={(e) => setShippingPhone(e.target.value)}
+                        placeholder="+351 912 345 678"
+                        className="w-full px-3.5 py-2.5 bg-[#121110] border border-neutral-800 rounded-none text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-400 font-semibold block mb-1.5">
+                      Street Address *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={shippingAddress}
+                      onChange={(e) => setShippingAddress(e.target.value)}
+                      placeholder="e.g. Rua da Boavista 84"
+                      className="w-full px-3.5 py-2.5 bg-[#121110] border border-neutral-800 rounded-none text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-400 font-semibold block mb-1.5">
+                      Apartment, suite, unit (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={shippingApartment}
+                      onChange={(e) => setShippingApartment(e.target.value)}
+                      placeholder="e.g. Atelier 4B"
+                      className="w-full px-3.5 py-2.5 bg-[#121110] border border-neutral-800 rounded-none text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-400 font-semibold block mb-1.5">
+                        City *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={shippingCity}
+                        onChange={(e) => setShippingCity(e.target.value)}
+                        placeholder="Lisboa"
+                        className="w-full px-3.5 py-2.5 bg-[#121110] border border-neutral-800 rounded-none text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-400 font-semibold block mb-1.5">
+                        Postal Code
+                      </label>
+                      <input
+                        type="text"
+                        value={shippingPostcode}
+                        onChange={(e) => setShippingPostcode(e.target.value)}
+                        placeholder="1200-068"
+                        className="w-full px-3.5 py-2.5 bg-[#121110] border border-neutral-800 rounded-none text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-400 font-semibold block mb-1.5">
+                        Country
+                      </label>
+                      <select
+                        value={shippingCountry}
+                        onChange={(e) => setShippingCountry(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-[#121110] border border-neutral-800 rounded-none text-xs text-white focus:outline-none focus:border-neutral-500"
+                      >
+                        <option value="Portugal">Portugal</option>
+                        <option value="Spain">Spain</option>
+                        <option value="France">France</option>
+                        <option value="Germany">Germany</option>
+                        <option value="United Kingdom">United Kingdom</option>
+                        <option value="United States">United States</option>
+                        <option value="Canada">Canada</option>
+                        <option value="Japan">Japan</option>
+                        <option value="Australia">Australia</option>
+                        <option value="Italy">Italy</option>
+                        <option value="Netherlands">Netherlands</option>
+                        <option value="Switzerland">Switzerland</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </section>
@@ -308,10 +496,17 @@ export default function CheckoutPage() {
               <div className="pt-4">
                 <button
                   type="submit"
-                  className="w-full py-4 bg-white hover:bg-neutral-200 text-neutral-950 text-xs font-bold tracking-[0.22em] uppercase transition-colors shadow-lg cursor-pointer flex items-center justify-center gap-2"
+                  disabled={isSubmitting}
+                  className="w-full py-4 bg-white hover:bg-neutral-200 disabled:bg-neutral-700 disabled:cursor-not-allowed text-neutral-950 text-xs font-bold tracking-[0.22em] uppercase transition-colors shadow-lg cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <span>COMPLETE ORDER</span>
-                  <ArrowRight className="w-4 h-4" />
+                  {isSubmitting ? (
+                    <span>PROCESSING ORDER...</span>
+                  ) : (
+                    <>
+                      <span>COMPLETE ORDER</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
               </div>
             </form>

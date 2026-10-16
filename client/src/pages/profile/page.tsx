@@ -243,17 +243,28 @@ export default function ProfilePage() {
                   Client Profile
                 </span>
                 <span className="text-[9px] tracking-wider uppercase px-2 py-0.5 bg-neutral-900 text-neutral-300 border border-neutral-800 rounded font-semibold">
-                  {user?.role === 'ADMIN' ? 'Phantom Admin' : 'Collector'}
+                  {user?.role === 'ADMIN' ? 'Phantom Admin' : 'User'}
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-                {user?.fullName || `${firstName} ${lastName}`.trim() || 'Phantom Collector'}
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-2">
+                <span>{user?.firstName || firstName || 'User'}</span>
+                {(user?.lastName || lastName) && (
+                  <span className="text-white font-bold text-xl sm:text-2xl">
+                    {user?.lastName || lastName}
+                  </span>
+                )}
               </h1>
               <p className="text-xs text-neutral-400 mt-1 flex items-center gap-3">
                 <span>{user?.email}</span>
                 <span className="text-neutral-600">•</span>
                 <span>Member since {memberSince}</span>
               </p>
+              {!user?.firstName && !firstName && (
+                <p className="text-[11px] text-orange-400/90 font-medium mt-1.5 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span>Please enter your first and last name below to complete your profile.</span>
+                </p>
+              )}
             </div>
           </div>
 

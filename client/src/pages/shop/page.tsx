@@ -3,247 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, SlidersHorizontal, ChevronDown, Check } from 'lucide-react';
 import ProductCard from '../../components/ui/ProductCard';
-import type { ProductItem } from '../../context/StoreContext';
 import { api } from '../../services/api';
-
-// 16 Curated Phantom Pieces as robust fallback/initial dataset
-const daysAgo = (d: number) => new Date(Date.now() - d * 24 * 60 * 60 * 1000).toISOString();
-
-const CURATED_SHOP_PRODUCTS: (ProductItem & { salesCount?: number; collections?: any[] })[] = [
-  // --- TOP 4 BESTSELLERS (Row 1) ---
-  {
-    id: 'prod-1',
-    name: 'Halden Wool Overcoat',
-    slug: 'halden-wool-overcoat',
-    price: 680,
-    category: 'OUTERWEAR',
-    salesCount: 15,
-    createdAt: daysAgo(45),
-    isSoldOut: false,
-    images: [
-      'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=85'
-    ]
-  },
-  {
-    id: 'prod-2',
-    name: 'Merino Chunky Knit',
-    slug: 'merino-chunky-knit',
-    price: 340,
-    category: 'KNITWEAR',
-    salesCount: 12,
-    createdAt: daysAgo(30),
-    isSoldOut: false,
-    images: [
-      'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&w=1000&q=85'
-    ]
-  },
-  {
-    id: 'prod-3',
-    name: 'Phantom Tote, Saddle',
-    slug: 'phantom-tote-saddle',
-    price: 480,
-    category: 'LEATHER',
-    salesCount: 10,
-    createdAt: daysAgo(60),
-    isSoldOut: false,
-    images: [
-      'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=1000&q=85'
-    ],
-    collections: [{ id: 'col-raw-terre', name: 'Raw Terre & Hide', slug: 'raw-terre-and-hide' }]
-  },
-  {
-    id: 'prod-4',
-    name: 'Kaolin Vase, Tall',
-    slug: 'kaolin-vase-tall',
-    price: 140,
-    category: 'OBJECTS',
-    salesCount: 9,
-    createdAt: daysAgo(40),
-    isSoldOut: false,
-    images: [
-      'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?auto=format&fit=crop&w=1000&q=85'
-    ],
-    collections: [{ id: 'col-obsidian', name: 'Obsidian Nocturne', slug: 'obsidian-nocturne' }]
-  },
-
-  // --- RECENT PIECES (created within last 7 days -> NEW tag) ---
-  {
-    id: 'prod-5',
-    name: 'Hamo Cropped Trench',
-    slug: 'hamo-cropped-trench',
-    price: 520,
-    category: 'OUTERWEAR',
-    salesCount: 2,
-    createdAt: daysAgo(2), // 2 days old -> NEW
-    isSoldOut: true,
-    images: [
-      'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1000&q=85'
-    ]
-  },
-  {
-    id: 'prod-6',
-    name: 'Marne Cropped Trench',
-    slug: 'marne-cropped-trench',
-    price: 520,
-    category: 'OUTERWEAR',
-    salesCount: 1,
-    createdAt: daysAgo(3), // 3 days old -> NEW
-    isSoldOut: true,
-    images: [
-      'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1000&q=85'
-    ]
-  },
-  {
-    id: 'prod-7',
-    name: 'Sundby Cashmere Crew',
-    slug: 'sundby-cashmere-crew',
-    price: 285,
-    category: 'KNITWEAR',
-    salesCount: 3,
-    createdAt: daysAgo(1), // 1 day old -> NEW
-    isSoldOut: false,
-    images: [
-      'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&w=1000&q=85'
-    ]
-  },
-  {
-    id: 'prod-8',
-    name: 'Bridle Leather Belt',
-    slug: 'bridle-leather-belt',
-    price: 145,
-    category: 'LEATHER',
-    salesCount: 2,
-    createdAt: daysAgo(4), // 4 days old -> NEW
-    isSoldOut: false,
-    images: [
-      'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=1000&q=85'
-    ]
-  },
-
-  // --- REMAINING PIECES (created > 7 days ago -> no NEW tag) ---
-  {
-    id: 'prod-9',
-    name: 'Quilted Liner Jacket',
-    slug: 'quilted-liner-jacket',
-    price: 390,
-    category: 'OUTERWEAR',
-    salesCount: 4,
-    createdAt: daysAgo(20),
-    isSoldOut: false,
-    images: [
-      'https://images.unsplash.com/photo-1548883354-7622d03aca27?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1000&q=85'
-    ]
-  },
-  {
-    id: 'prod-10',
-    name: 'Soren Wool Peacoat',
-    slug: 'soren-wool-peacoat',
-    price: 640,
-    category: 'OUTERWEAR',
-    salesCount: 5,
-    createdAt: daysAgo(25),
-    isSoldOut: false,
-    images: [
-      'https://images.unsplash.com/photo-1539533018447-63fcce2678e3?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=1000&q=85'
-    ]
-  },
-  {
-    id: 'prod-11',
-    name: 'Alpaca Rib Cardigan',
-    slug: 'alpaca-rib-cardigan',
-    price: 395,
-    category: 'KNITWEAR',
-    salesCount: 3,
-    createdAt: daysAgo(18),
-    isSoldOut: false,
-    images: [
-      'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?auto=format&fit=crop&w=1000&q=85'
-    ]
-  },
-  {
-    id: 'prod-12',
-    name: 'Fine Gauge Mock Neck',
-    slug: 'fine-gauge-mock-neck',
-    price: 260,
-    category: 'KNITWEAR',
-    salesCount: 2,
-    createdAt: daysAgo(22),
-    isSoldOut: false,
-    images: [
-      'https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?auto=format&fit=crop&w=1000&q=85'
-    ]
-  },
-
-  // --- ROW 4 / LOAD MORE PIECES ---
-  {
-    id: 'prod-13',
-    name: 'Folded Card Holder',
-    slug: 'folded-card-holder',
-    price: 120,
-    category: 'LEATHER',
-    salesCount: 5,
-    createdAt: daysAgo(15),
-    isSoldOut: false,
-    images: [
-      'https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=1000&q=85'
-    ]
-  },
-  {
-    id: 'prod-14',
-    name: 'Turned Corozo Tray',
-    slug: 'turned-corozo-tray',
-    price: 95,
-    category: 'OBJECTS',
-    salesCount: 1,
-    createdAt: daysAgo(19),
-    isSoldOut: false,
-    images: [
-      'https://images.unsplash.com/photo-1584589167171-541ce45f1eea?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=1000&q=85'
-    ]
-  },
-  {
-    id: 'prod-15',
-    name: 'Field Canvas Parka',
-    slug: 'field-canvas-parka',
-    price: 560,
-    category: 'OUTERWEAR',
-    salesCount: 2,
-    createdAt: daysAgo(28),
-    isSoldOut: false,
-    images: [
-      'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=1000&q=85'
-    ]
-  },
-  {
-    id: 'prod-16',
-    name: 'Smoked Stoneware Bowl',
-    slug: 'smoked-stoneware-bowl',
-    price: 85,
-    category: 'OBJECTS',
-    salesCount: 1,
-    createdAt: daysAgo(35),
-    isSoldOut: false,
-    images: [
-      'https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=1000&q=85'
-    ]
-  }
-];
+import SEO from '../../components/common/SEO';
 
 const DEFAULT_CATEGORIES = [
   { label: 'ALL PIECES', value: 'all' },
@@ -269,7 +30,8 @@ export default function ShopPage() {
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [searchQuery, setSearchQuery] = useState('');
-  const [rawProducts, setRawProducts] = useState<any[]>(CURATED_SHOP_PRODUCTS);
+  const [rawProducts, setRawProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [visibleCount, setVisibleCount] = useState(12); // Initial 4 by 3 grid (12 products)
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
@@ -334,9 +96,10 @@ export default function ShopPage() {
     }
   }, [searchParams]);
 
-  // Fetch live products from backend API (with graceful fallback to curated items)
+  // Fetch live products from backend database API
   useEffect(() => {
     let isMounted = true;
+    setLoading(true);
 
     api
       .get('/products?limit=50')
@@ -377,8 +140,11 @@ export default function ShopPage() {
           setRawProducts(mapped);
         }
       })
-      .catch(() => {
-        // Retain curated list fallback
+      .catch((err) => {
+        console.error('Failed to load products from database:', err);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
       });
 
     return () => {
@@ -470,6 +236,10 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-[#121110] text-[#f4f2ee] selection:bg-neutral-800 selection:text-white">
+      <SEO
+        title="Shop All Editions"
+        description="Explore limited seasonal releases, selvedge denim, heavy knitwear, and archival leather essentials from Phantom Atelier."
+      />
       {/* 1. Header Section */}
       <section className="pt-16 sm:pt-24 lg:pt-28 pb-8 sm:pb-12 px-6 sm:px-10 lg:px-12">
         <div className="max-w-[1320px] mx-auto">
@@ -658,8 +428,21 @@ export default function ShopPage() {
           {/* 3. Divider Line Respecting 1320px Max Width */}
           <div className="border-b border-white/10 mb-10 sm:mb-14" />
 
-          {/* 4. Products Grid: 4 by 3 Layout (Top Row = Bestsellers, Remaining = 8 pieces) */}
-          {displayedProducts.length > 0 ? (
+          {/* 4. Products Grid */}
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-7">
+              {Array.from({ length: 8 }).map((_, idx) => (
+                <div key={idx} className="animate-pulse space-y-3">
+                  <div className="aspect-[3/4] bg-[#161514] rounded-sm" />
+                  <div className="space-y-2 pt-1">
+                    <div className="h-3 w-1/3 bg-neutral-800/60 rounded" />
+                    <div className="h-4 w-4/5 bg-neutral-800/80 rounded" />
+                    <div className="h-4 w-1/4 bg-neutral-800/60 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : displayedProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-7">
               {displayedProducts.map((product, idx) => (
                 <motion.div

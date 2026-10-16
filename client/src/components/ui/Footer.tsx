@@ -61,6 +61,7 @@ function FooterLink({ to, children, requiresAuth = false, authMessage }: FooterL
 export default function Footer({ brandName = 'PHANTOM' }: FooterProps) {
   const location = useLocation();
   const isFaqPage = location.pathname === '/faq';
+  const isHomePage = location.pathname === '/';
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
 
@@ -73,7 +74,7 @@ export default function Footer({ brandName = 'PHANTOM' }: FooterProps) {
   };
 
   return (
-    <footer className={`w-full bg-[#f6f5f0] text-neutral-800 ${isFaqPage ? '' : 'border-t border-neutral-300/70'} pt-16 pb-12 px-6 sm:px-10 lg:px-16 selection:bg-neutral-300 selection:text-black`}>
+    <footer className={`w-full bg-[#f6f5f0] text-neutral-800 ${isFaqPage || isHomePage ? '' : 'border-t border-neutral-300/70'} pt-16 pb-12 px-6 sm:px-10 lg:px-16 selection:bg-neutral-300 selection:text-black`}>
       <div className="max-w-[1440px] mx-auto">
         {/* Top Section: Brand & Newsletter */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 pb-16">
@@ -81,9 +82,9 @@ export default function Footer({ brandName = 'PHANTOM' }: FooterProps) {
           <div className="lg:col-span-6 space-y-4 max-w-xs">
             <Link
               to="/"
-              className="text-3xl sm:text-4xl font-extrabold tracking-[0.35em] uppercase text-black hover:opacity-85 transition-opacity inline-block select-none"
+              className="inline-flex items-center gap-3 text-3xl sm:text-4xl font-extrabold tracking-[0.35em] uppercase text-black hover:opacity-85 transition-opacity select-none"
             >
-              {brandName}
+              <span>{brandName}</span>
             </Link>
             <p className="text-[16px] leading-relaxed text-neutral-600 font-normal">
               Considered essentials, made in small runs with mills and tanneries we have worked with for a decade.
@@ -326,11 +327,7 @@ export default function Footer({ brandName = 'PHANTOM' }: FooterProps) {
           <div className="flex items-center gap-3.5 font-semibold text-neutral-600 tracking-wider text-[11px] uppercase select-none">
             <span className="hover:text-black transition-colors cursor-default">PAYPAL</span>
             <span>&bull;</span>
-            <span className="hover:text-black transition-colors cursor-default">KLARNA</span>
-            <span>&bull;</span>
             <span className="hover:text-black transition-colors cursor-default">STRIPE</span>
-            <span>&bull;</span>
-            <span className="hover:text-black transition-colors cursor-default">APPLE PAY</span>
           </div>
         </div>
       </div>

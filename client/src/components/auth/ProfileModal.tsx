@@ -85,7 +85,7 @@ export default function ProfileModal() {
                 PHANTOM PROFILE
               </span>
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">
-                {user.fullName}
+                {user.firstName || user.fullName || 'Collector'}
               </h2>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-[10px] tracking-wider uppercase px-2 py-0.5 bg-neutral-900 text-neutral-300 border border-neutral-800 rounded">

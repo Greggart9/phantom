@@ -210,6 +210,30 @@ export const updateAdminOrderStatus = async (req: Request, res: Response): Promi
 };
 
 /**
+ * DELETE /api/admin/orders/:id
+ * Permanently delete an order and cascade its items.
+ */
+export const deleteAdminOrder = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const existing = await prisma.order.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ success: false, message: 'Order not found' });
+      return;
+    }
+
+    await prisma.order.delete({ where: { id } });
+    res.json({
+      success: true,
+      message: `Order #${existing.orderNumber} deleted successfully`
+    });
+  } catch (error: any) {
+    console.error('deleteAdminOrder Error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to delete order' });
+  }
+};
+
+/**
  * GET /api/admin/reviews
  * Full moderation list.
  */
@@ -626,3 +650,149 @@ export const deleteAdminCollection = async (req: Request, res: Response): Promis
     res.status(500).json({ success: false, message: 'Failed to delete collection' });
   }
 };
+
+/**
+ * GET /api/admin/users
+ * List all registered users with order and engagement counts.
+ */
+export const getAdminUsers = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        address: true,
+        apartment: true,
+        city: true,
+        postcode: true,
+        country: true,
+        role: true,
+        googleId: true,
+        createdAt: true,
+        _count: {
+          select: {
+            orders: true,
+            reviews: true
+          }
+        },
+        orders: {
+          select: {
+            totalAmount: true,
+            status: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const formatted = users.map((u) => {
+      const totalSpent = u.orders
+        .filter((o) => o.status !== 'CANCELLED')
+        .reduce((sum, o) => sum + Number(o.totalAmount), 0);
+
+      return {
+        id: u.id,
+        email: u.email,
+        fullName: u.fullName,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        phone: u.phone,
+        address: u.address,
+        apartment: u.apartment,
+        city: u.city,
+        postcode: u.postcode,
+        country: u.country,
+        role: u.role,
+        isGoogleUser: Boolean(u.googleId),
+        createdAt: u.createdAt,
+        ordersCount: u._count.orders,
+        reviewsCount: u._count.reviews,
+        totalSpent
+      };
+    });
+
+    res.json({ success: true, users: formatted });
+  } catch (error) {
+    console.error('getAdminUsers Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to load users' });
+  }
+};
+
+/**
+ * DELETE /api/admin/users/:id
+ * Permanently and cleanly delete a user and all cascade items from database.
+ */
+export const deleteAdminUser = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const activeAdminId = req.user?.userId;
+
+    if (id === activeAdminId) {
+      res.status(400).json({
+        success: false,
+        message: 'You cannot delete your own active administrator account.'
+      });
+      return;
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, fullName: true, role: true }
+    });
+
+    if (!existingUser) {
+      res.status(404).json({ success: false, message: 'User not found in database.' });
+      return;
+    }
+
+    // Clean cascade transaction
+    await prisma.$transaction(async (tx) => {
+      // 1. Delete cart items & cart
+      await tx.cartItem.deleteMany({
+        where: { cart: { userId: id } }
+      });
+      await tx.cart.deleteMany({
+        where: { userId: id }
+      });
+
+      // 2. Delete wishlist items
+      await tx.wishlistItem.deleteMany({
+        where: { userId: id }
+      });
+
+      // 3. Delete reviews
+      await tx.review.deleteMany({
+        where: { userId: id }
+      });
+
+      // 4. Delete order items & orders
+      await tx.orderItem.deleteMany({
+        where: { order: { userId: id } }
+      });
+      await tx.order.deleteMany({
+        where: { userId: id }
+      });
+
+      // 5. Delete user record
+      await tx.user.delete({
+        where: { id }
+      });
+    });
+
+    res.json({
+      success: true,
+      message: `User ${existingUser.email} and all associated records have been permanently cleaned from database.`
+    });
+  } catch (error: any) {
+    console.error('deleteAdminUser Error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to delete user.'
+    });
+  }
+};
+

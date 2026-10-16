@@ -6,7 +6,8 @@ import {
   Truck,
   CheckCircle,
   ChevronRight,
-  Save
+  Save,
+  Trash2
 } from 'lucide-react';
 
 interface OrderItem {
@@ -44,6 +45,30 @@ export default function OrdersPage() {
   const [newCarrier, setNewCarrier] = useState<string>('DHL Express');
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
+  const handleDeleteOrder = async (orderId: string, orderNumber: string) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently delete Order #${orderNumber}?\n\nThis will remove the order record from PostgreSQL and cascade all associated items. This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setIsDeleting(orderId);
+      const res = await axios.delete(`/api/admin/orders/${orderId}`, { withCredentials: true });
+      if (res.data?.success) {
+        setOrders((prev) => prev.filter((o) => o.id !== orderId));
+        if (selectedOrder?.id === orderId) {
+          setSelectedOrder(null);
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to delete order:', err);
+      alert(err.response?.data?.message || 'Failed to delete order.');
+    } finally {
+      setIsDeleting(null);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -221,10 +246,12 @@ export default function OrdersPage() {
                       {/* Client */}
                       <td className="py-3.5 px-4">
                         <span className="font-sans font-medium text-white block">
-                          {order.user.fullName}
+                          {order.shippingAddress?.firstName
+                            ? `${order.shippingAddress.firstName} ${order.shippingAddress.lastName || ''}`.trim()
+                            : order.user.fullName}
                         </span>
                         <span className="text-[10px] text-neutral-400 block">
-                          {order.user.email}
+                          {order.shippingAddress?.email || order.user.email}
                         </span>
                       </td>
 
@@ -269,9 +296,26 @@ export default function OrdersPage() {
 
                       {/* Action */}
                       <td className="py-3.5 px-4 text-right">
-                        <button className="p-1.5 text-neutral-400 hover:text-white rounded hover:bg-neutral-800">
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteOrder(order.id, order.orderNumber);
+                            }}
+                            disabled={isDeleting === order.id}
+                            title="Delete Order"
+                            className="p-1.5 text-neutral-500 hover:text-red-400 rounded hover:bg-neutral-800 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            className="p-1.5 text-neutral-400 hover:text-white rounded hover:bg-neutral-800"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -367,15 +411,26 @@ export default function OrdersPage() {
                   </span>
                 )}
 
-                <button
-                  type="button"
-                  disabled={isUpdating}
-                  onClick={handleUpdateFulfillment}
-                  className="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-black text-xs uppercase tracking-wider font-bold rounded flex items-center gap-1.5 transition-colors"
-                >
-                  <Save className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>{isUpdating ? 'Saving...' : 'Save Dispatch'}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={isDeleting === selectedOrder.id}
+                    onClick={() => handleDeleteOrder(selectedOrder.id, selectedOrder.orderNumber)}
+                    className="px-3 py-1.5 bg-red-950/40 hover:bg-red-900/60 border border-red-800/60 text-red-300 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{isDeleting === selectedOrder.id ? 'Deleting...' : 'Delete Order'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isUpdating}
+                    onClick={handleUpdateFulfillment}
+                    className="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-black text-xs uppercase tracking-wider font-bold rounded flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Save className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>{isUpdating ? 'Saving...' : 'Save Dispatch'}</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -385,10 +440,21 @@ export default function OrdersPage() {
                 <span className="text-[10px] uppercase tracking-wider text-neutral-400 font-mono block">
                   Client Information
                 </span>
-                <p className="font-semibold text-white">{selectedOrder.user.fullName}</p>
-                <p className="text-neutral-400 font-mono">{selectedOrder.user.email}</p>
+                <p className="font-semibold text-white">
+                  {selectedOrder.shippingAddress?.firstName
+                    ? `${selectedOrder.shippingAddress.firstName} ${selectedOrder.shippingAddress.lastName || ''}`.trim()
+                    : selectedOrder.user.fullName || 'Collector'}
+                </p>
                 <p className="text-neutral-400 font-mono">
-                  Origin Country: {selectedOrder.user.country || 'Not specified'}
+                  {selectedOrder.shippingAddress?.email || selectedOrder.user.email}
+                </p>
+                {selectedOrder.shippingAddress?.phone && (
+                  <p className="text-neutral-400 font-mono">
+                    Tel: {selectedOrder.shippingAddress.phone}
+                  </p>
+                )}
+                <p className="text-neutral-400 font-mono">
+                  Account Country: {selectedOrder.user.country || 'Not specified'}
                 </p>
                 {selectedOrder.paymentIntentId && (
                   <p className="text-[10px] text-neutral-400 font-mono truncate pt-1">
@@ -403,13 +469,21 @@ export default function OrdersPage() {
                 </span>
                 {selectedOrder.shippingAddress && typeof selectedOrder.shippingAddress === 'object' ? (
                   <div className="text-neutral-300 space-y-0.5">
-                    <p>{selectedOrder.shippingAddress.address || selectedOrder.shippingAddress.street}</p>
                     <p>
-                      {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state}{' '}
-                      {selectedOrder.shippingAddress.postalCode}
+                      {selectedOrder.shippingAddress.address || selectedOrder.shippingAddress.street || 'Primary Address'}
+                      {selectedOrder.shippingAddress.apartment ? `, ${selectedOrder.shippingAddress.apartment}` : ''}
                     </p>
-                    <p className="uppercase font-mono text-[11px]">
-                      {selectedOrder.shippingAddress.country}
+                    <p>
+                      {[
+                        selectedOrder.shippingAddress.city,
+                        selectedOrder.shippingAddress.state,
+                        selectedOrder.shippingAddress.postcode || selectedOrder.shippingAddress.postalCode
+                      ]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </p>
+                    <p className="uppercase font-mono text-[11px] text-neutral-400">
+                      {selectedOrder.shippingAddress.country || 'Portugal'}
                     </p>
                   </div>
                 ) : (

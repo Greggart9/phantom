@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../prisma';
 import { stripe, isStripeConfigured } from '../config/stripe';
 import { checkoutSchema, updateOrderStatusSchema } from '../validators/order.validator';
+import { sendOrderConfirmationEmail, sendAdminNewOrderAlertEmail } from '../services/email.service';
 
 const generateOrderNumber = () =>
   `PH-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -23,6 +24,30 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
 
     const { items, shippingAddress } = parsed.data;
 
+    // Normalize shipping address
+    const rawShipping: any = shippingAddress;
+    const firstName = (rawShipping.firstName || rawShipping.fullName?.split(' ')[0] || '').trim();
+    const lastName = (rawShipping.lastName || rawShipping.fullName?.split(' ').slice(1).join(' ') || '').trim();
+    const address = (rawShipping.address || rawShipping.addressLine1 || '').trim();
+    const apartment = (rawShipping.apartment || rawShipping.addressLine2 || '').trim();
+    const city = (rawShipping.city || '').trim();
+    const postcode = (rawShipping.postcode || rawShipping.postalCode || '').trim();
+    const country = (rawShipping.country || 'Portugal').trim();
+    const phone = (rawShipping.phone || '').trim();
+    const email = (rawShipping.email || '').trim();
+
+    const normalizedAddress = {
+      firstName,
+      lastName,
+      address,
+      apartment,
+      city,
+      postcode,
+      country,
+      phone,
+      email
+    };
+
     // 1. Fetch products & verify stock
     const productIds = items.map((i) => i.productId);
     const products = await prisma.product.findMany({
@@ -37,7 +62,7 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
     // 2. Validate inventory count
     const productMap = new Map(products.map((p) => [p.id, p]));
     let totalAmount = 0;
-    const orderItemsData: Array<{ productId: string; quantity: number; unitPrice: number }> = [];
+    const orderItemsData: Array<{ productId: string; quantity: number; unitPrice: number; size?: string; color?: string }> = [];
 
     for (const item of items) {
       const product = productMap.get(item.productId)!;
@@ -53,19 +78,23 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
       orderItemsData.push({
         productId: product.id,
         quantity: item.quantity,
-        unitPrice: price
+        unitPrice: price,
+        size: (item as any).size,
+        color: (item as any).color
       });
     }
 
-    // 3. Create Order in Database (PENDING)
+    // 3. Create Order in Database
     const orderNumber = generateOrderNumber();
+    const isDirectCheckout = !isStripeConfigured || !stripe;
+
     const order = await prisma.order.create({
       data: {
         orderNumber,
         userId,
         totalAmount,
-        status: 'PENDING',
-        shippingAddress: shippingAddress as any,
+        status: isDirectCheckout ? 'PAID' : 'PENDING',
+        shippingAddress: normalizedAddress as any,
         orderItems: {
           create: orderItemsData.map((oi) => ({
             productId: oi.productId,
@@ -81,9 +110,22 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
       }
     });
 
+    // Fetch user for notifications
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, firstName: true, lastName: true, fullName: true, phone: true }
+    });
+
+    const customerEmail = email || user?.email || '';
+    const customerName =
+      [firstName, lastName].filter(Boolean).join(' ') ||
+      (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : '') ||
+      user?.fullName ||
+      'Valued Collector';
+
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
 
-    // 4. Create Stripe Checkout Session (if configured) or simulated checkout
+    // 4. Handle checkout flow
     if (isStripeConfigured && stripe) {
       const line_items = order.orderItems.map((item) => ({
         price_data: {
@@ -124,13 +166,76 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
         checkoutUrl: session.url
       });
     } else {
-      // Development mode / Simulated checkout fallback
+      // Direct / Simulated checkout: mark PAID, decrement stock, clear cart, dispatch emails
+      await prisma.$transaction(async (tx) => {
+        for (const item of order.orderItems) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: {
+              stockQuantity: {
+                decrement: item.quantity
+              }
+            }
+          });
+        }
+        // Clear user's database cart
+        await tx.cartItem.deleteMany({
+          where: { cart: { userId } }
+        });
+      });
+
+      // Dispatch order emails in background
+      const emailItems = order.orderItems.map((oi) => ({
+        name: oi.product.title,
+        quantity: oi.quantity,
+        price: Number(oi.unitPrice)
+      }));
+
+      if (customerEmail) {
+        sendOrderConfirmationEmail({
+          customerName,
+          customerEmail,
+          orderNumber: order.orderNumber,
+          totalAmount,
+          shippingAddress: {
+            firstName: firstName || 'Valued',
+            lastName: lastName || 'Collector',
+            address,
+            apartment,
+            city,
+            postcode,
+            country,
+            phone: phone || user?.phone || undefined
+          },
+          items: emailItems
+        }).catch((err) => console.error('[Order Confirmation Email Error]', err));
+      }
+
+      sendAdminNewOrderAlertEmail({
+        customerName,
+        customerEmail: customerEmail || 'customer@phantom.studio',
+        orderNumber: order.orderNumber,
+        totalAmount,
+        shippingAddress: {
+          firstName: firstName || 'Valued',
+          lastName: lastName || 'Collector',
+          address,
+          apartment,
+          city,
+          postcode,
+          country,
+          phone: phone || user?.phone || undefined
+        },
+        items: emailItems
+      }).catch((err) => console.error('[Admin Order Alert Email Error]', err));
+
       res.status(201).json({
         success: true,
         orderId: order.id,
         orderNumber: order.orderNumber,
+        order,
         isSimulated: true,
-        checkoutUrl: `${clientUrl}/checkout/success?orderId=${order.id}`
+        checkoutUrl: `${clientUrl}/account/orders`
       });
     }
   } catch (error) {
@@ -147,7 +252,10 @@ export const confirmOrderPayment = async (req: Request, res: Response): Promise<
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { orderItems: true }
+      include: {
+        orderItems: { include: { product: true } },
+        user: true
+      }
     });
 
     if (!order) {
@@ -178,6 +286,11 @@ export const confirmOrderPayment = async (req: Request, res: Response): Promise<
         });
       }
 
+      // Clear user's database cart
+      await tx.cartItem.deleteMany({
+        where: { cart: { userId: order.userId } }
+      });
+
       return tx.order.update({
         where: { id: orderId },
         data: { status: 'PAID' },
@@ -188,6 +301,59 @@ export const confirmOrderPayment = async (req: Request, res: Response): Promise<
         }
       });
     });
+
+    // Dispatch emails on confirmation
+    const shipping: any = order.shippingAddress || {};
+    const customerEmail = shipping.email || order.user?.email || '';
+    const customerName =
+      [shipping.firstName, shipping.lastName].filter(Boolean).join(' ') ||
+      (order.user?.firstName ? `${order.user.firstName} ${order.user.lastName || ''}`.trim() : '') ||
+      order.user?.fullName ||
+      'Valued Collector';
+
+    const emailItems = order.orderItems.map((oi) => ({
+      name: oi.product.title,
+      quantity: oi.quantity,
+      price: Number(oi.unitPrice)
+    }));
+
+    if (customerEmail) {
+      sendOrderConfirmationEmail({
+        customerName,
+        customerEmail,
+        orderNumber: order.orderNumber,
+        totalAmount: Number(order.totalAmount),
+        shippingAddress: {
+          firstName: shipping.firstName || 'Valued',
+          lastName: shipping.lastName || 'Collector',
+          address: shipping.address || '',
+          apartment: shipping.apartment,
+          city: shipping.city || '',
+          postcode: shipping.postcode || '',
+          country: shipping.country || 'Portugal',
+          phone: shipping.phone || order.user?.phone || undefined
+        },
+        items: emailItems
+      }).catch((err) => console.error('[Order Confirmation Email Error]', err));
+    }
+
+    sendAdminNewOrderAlertEmail({
+      customerName,
+      customerEmail: customerEmail || 'customer@phantom.studio',
+      orderNumber: order.orderNumber,
+      totalAmount: Number(order.totalAmount),
+      shippingAddress: {
+        firstName: shipping.firstName || 'Valued',
+        lastName: shipping.lastName || 'Collector',
+        address: shipping.address || '',
+        apartment: shipping.apartment,
+        city: shipping.city || '',
+        postcode: shipping.postcode || '',
+        country: shipping.country || 'Portugal',
+        phone: shipping.phone || order.user?.phone || undefined
+      },
+      items: emailItems
+    }).catch((err) => console.error('[Admin Order Alert Email Error]', err));
 
     res.json({
       success: true,
@@ -302,3 +468,25 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
     res.status(500).json({ success: false, message: 'Failed to update order status' });
   }
 };
+
+// DELETE /api/orders/admin/:id or /api/orders/:id (Admin only - Delete order)
+export const deleteOrder = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const orderId = req.params.id as string;
+    const existing = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!existing) {
+      res.status(404).json({ success: false, message: 'Order not found' });
+      return;
+    }
+
+    await prisma.order.delete({ where: { id: orderId } });
+    res.json({
+      success: true,
+      message: `Order #${existing.orderNumber} deleted successfully`
+    });
+  } catch (error: any) {
+    console.error('deleteOrder Error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to delete order' });
+  }
+};
+

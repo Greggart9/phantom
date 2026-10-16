@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock, ArrowRight, CheckCircle2, AlertCircle, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { PhantomMark } from '../ui/BrandLogo';
 
 export default function AuthModal() {
   const {
@@ -47,32 +48,122 @@ export default function AuthModal() {
     setViewMode('auth');
   };
 
+  // Initialize Google One-Tap if client ID is configured
+  useEffect(() => {
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!googleClientId || typeof window === 'undefined' || !window.google?.accounts?.id) return;
+
+    try {
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: async (response: { credential: string }) => {
+          if (!response?.credential) return;
+          setLoading(true);
+          setError(null);
+          const res = await loginWithGoogle({ credential: response.credential });
+          setLoading(false);
+          if (!res.success) {
+            setError(res.message);
+          }
+        },
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+    } catch {
+      // Background initialization notice
+    }
+  }, [loginWithGoogle]);
+
   const handleGoogleSignIn = async () => {
     setError(null);
     setSuccessMsg(null);
 
-    const googleEmail =
-      email.trim() ||
-      prompt('Enter your Google Account email for sign-in:') ||
-      '';
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-    if (!googleEmail.trim()) return;
-
-    if (!googleEmail.includes('@') || !googleEmail.includes('.')) {
-      setError('Please provide a valid Google email address.');
+    if (!googleClientId) {
+      setError(
+        'Google Sign-In is not configured yet. Please configure VITE_GOOGLE_CLIENT_ID in your environment, or sign in using your email and password below.'
+      );
       return;
     }
 
-    setLoading(true);
-    const res = await loginWithGoogle({
-      email: googleEmail.trim().toLowerCase(),
-      fullName: googleEmail.split('@')[0],
-      googleId: `google_${Date.now()}`
-    });
-    setLoading(false);
+    if (!window.google?.accounts) {
+      setError('Google Sign-In service is initializing. Please check your internet connection and try again.');
+      return;
+    }
 
-    if (!res.success) {
-      setError(res.message);
+    try {
+      setLoading(true);
+
+      // Trigger Google account selector popup using OAuth2 Token Client
+      if (window.google.accounts.oauth2) {
+        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: googleClientId,
+          scope: 'openid email profile',
+          callback: async (tokenResponse) => {
+            if (tokenResponse.error) {
+              setLoading(false);
+              setError('Google sign-in was cancelled or encountered an error.');
+              return;
+            }
+
+            if (tokenResponse.access_token) {
+              try {
+                const infoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+                });
+                const profile = await infoRes.json();
+
+                if (profile?.email) {
+                  const res = await loginWithGoogle({
+                    email: profile.email.toLowerCase().trim(),
+                    fullName: profile.name || undefined,
+                    firstName: profile.given_name || undefined,
+                    lastName: profile.family_name || undefined,
+                    googleId: profile.sub
+                  });
+                  setLoading(false);
+                  if (!res.success) {
+                    setError(res.message);
+                  }
+                } else {
+                  setLoading(false);
+                  setError('Failed to retrieve profile information from Google.');
+                }
+              } catch {
+                setLoading(false);
+                setError('Failed to authenticate with Google profile service.');
+              }
+            } else {
+              setLoading(false);
+            }
+          },
+          error_callback: () => {
+            setLoading(false);
+            setError('Google sign-in popup was closed or blocked. Please allow popups and try again.');
+          }
+        });
+
+        // select_account forces Google to show all accounts on the device
+        tokenClient.requestAccessToken({ prompt: 'select_account' });
+        return;
+      }
+
+      // Fallback to Google Identity Services One-Tap prompt
+      if (window.google.accounts.id) {
+        window.google.accounts.id.prompt((notification: any) => {
+          if (notification?.isNotDisplayed?.() || notification?.isSkippedMoment?.()) {
+            setLoading(false);
+            setError('Google account selector could not be displayed. Please check popup permissions.');
+          }
+        });
+        return;
+      }
+
+      setLoading(false);
+    } catch (err: any) {
+      setLoading(false);
+      setError(err?.message || 'Failed to initialize Google account selector.');
     }
   };
 
@@ -201,7 +292,8 @@ export default function AuthModal() {
           </button>
 
           {/* Header & Wordmark */}
-          <div className="text-center mb-6">
+          <div className="text-center mb-6 flex flex-col items-center">
+            <PhantomMark size={34} className="text-white mb-2" />
             <span className="text-[11px] font-bold tracking-[0.35em] uppercase text-neutral-400">
               PHANTOM
             </span>

@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" fill="none">
+  <defs>
+    <radialGradient id="ogGlow" cx="50%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#1A1816" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#090807" stop-opacity="1" />
+    </radialGradient>
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2D2A26" />
+      <stop offset="50%" stop-color="#1F1D1A" />
+      <stop offset="100%" stop-color="#2D2A26" />
+    </linearGradient>
+  </defs>
+
+  <!-- Deep Luxury Canvas -->
+  <rect width="1200" height="630" fill="#090807"/>
+  <rect width="1200" height="630" fill="url(#ogGlow)"/>
+
+  <!-- Subtle Interior Framing -->
+  <rect x="40" y="40" width="1120" height="550" rx="4" stroke="url(#borderGrad)" stroke-width="1.5" />
+  <rect x="52" y="52" width="1096" height="526" rx="2" stroke="#161513" stroke-width="1" />
+
+  <!-- Corner Accents -->
+  <path d="M40 60V40H60" stroke="#CF5230" stroke-width="2" />
+  <path d="M1160 60V40H1140" stroke="#CF5230" stroke-width="2" />
+  <path d="M40 570V590H60" stroke="#CF5230" stroke-width="2" />
+  <path d="M1160 570V590H1140" stroke="#CF5230" stroke-width="2" />
+
+  <!-- Center Content -->
+  <g transform="translate(600, 160)">
+    <!-- Monogram Emblem -->
+    <g transform="translate(-40, -40)">
+      <rect width="80" height="80" rx="20" fill="#141311" stroke="#2B2824" stroke-width="1.5" />
+      <!-- Monogram P -->
+      <path d="M26 22H35.5V60H26V22Z" fill="#FFFFFF"/>
+      <path d="M35.5 22H49.5C57.5 22 63 27.5 63 35C63 42.5 57.5 48 49.5 48H35.5V22ZM35.5 30V40H48.8C52.2 40 54.5 37.8 54.5 35C54.5 32.2 52.2 30 48.8 30H35.5Z" fill="#FFFFFF"/>
+      <rect x="26" y="54" width="9.5" height="6" fill="#CF5230"/>
+    </g>
+
+    <!-- Overline Category -->
+    <text x="0" y="90" text-anchor="middle" fill="#CF5230" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="700" letter-spacing="6">
+      ATELIER &amp; FINE GOODS
+    </text>
+
+    <!-- Main Wordmark -->
+    <text x="0" y="160" text-anchor="middle" fill="#FFFFFF" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="76" font-weight="900" letter-spacing="16">
+      PHANTOM
+    </text>
+
+    <!-- Subtitle / Manifesto -->
+    <text x="0" y="215" text-anchor="middle" fill="#A39E93" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="400" letter-spacing="1">
+      Considered archival apparel and leather goods, crafted in limited seasonal runs.
+    </text>
+
+    <!-- Meta Details Row -->
+    <g transform="translate(0, 290)">
+      <!-- Left Pill -->
+      <g transform="translate(-190, 0)">
+        <rect x="-10" y="-18" width="180" height="34" rx="17" fill="#141311" stroke="#2B2824" stroke-width="1" />
+        <text x="80" y="4" text-anchor="middle" fill="#E5E5E5" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" letter-spacing="2">
+          TWO-YEAR REPAIR
+        </text>
+      </g>
+
+      <!-- Center Divider Dot -->
+      <circle cx="0" cy="0" r="3" fill="#CF5230" />
+
+      <!-- Right Pill -->
+      <g transform="translate(190, 0)">
+        <rect x="-170" y="-18" width="180" height="34" rx="17" fill="#141311" stroke="#2B2824" stroke-width="1" />
+        <text x="-80" y="4" text-anchor="middle" fill="#E5E5E5" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" letter-spacing="2">
+          EUROPEAN MILLS
+        </text>
+      </g>
+    </g>
+
+    <!-- URL Tagline -->
+    <text x="0" y="360" text-anchor="middle" fill="#666159" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="500" letter-spacing="3">
+      PHANTOM.OLUWADAMILARE.XYZ
+    </text>
+  </g>
+</svg>

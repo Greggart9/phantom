@@ -75,13 +75,13 @@ export default function Navbar({
             </nav>
           </div>
 
-          {/* Center: Brand Wordmark */}
+          {/* Center: Brand Wordmark with Luxury Monogram */}
           <div className="absolute left-1/2 transform -translate-x-1/2">
             <Link
               to="/"
-              className="text-base sm:text-xl font-bold tracking-[0.3em] sm:tracking-[0.38em] uppercase text-white hover:opacity-90 transition-opacity whitespace-nowrap"
+              className="inline-flex items-center gap-2 sm:gap-2.5 text-base sm:text-xl font-bold tracking-[0.3em] sm:tracking-[0.38em] uppercase text-white hover:opacity-90 transition-opacity whitespace-nowrap"
             >
-              {logoText}
+              <span>{logoText}</span>
             </Link>
           </div>
 

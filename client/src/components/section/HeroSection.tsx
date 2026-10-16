@@ -4,9 +4,10 @@ import { ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const BACKGROUND_IMAGES: string[] = [
-  'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=2400&q=85',
-  'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=2400&q=85',
-  'https://images.unsplash.com/photo-1485230895905-ec40ba36b9bc?auto=format&fit=crop&w=2400&q=85'
+  'https://res.cloudinary.com/degearesj/image/upload/v1792109275/asset1_3_ru0fwo.jpg',
+  'https://res.cloudinary.com/degearesj/image/upload/v1792109315/asset4_2_zc25rg.jpg',
+  'https://res.cloudinary.com/degearesj/image/upload/v1792109273/asset2_3_aztz6y.jpg',
+  'https://res.cloudinary.com/degearesj/image/upload/v1792109321/asset3_3_hdolpd.jpg'
 ];
 
 // Staggered entrance variants for child layers on page load

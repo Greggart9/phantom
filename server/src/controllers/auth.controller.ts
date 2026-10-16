@@ -63,11 +63,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     // Hash password & create user (assign ADMIN if email in whitelist, otherwise CUSTOMER)
     const passwordHash = await hashPassword(password);
-    const emailPrefix = email.split('@')[0];
+    const cleanFirstName = firstName?.trim() || null;
+    const cleanLastName = lastName?.trim() || null;
     const derivedFullName =
-      [firstName, lastName].filter(Boolean).join(' ') ||
+      [cleanFirstName, cleanLastName].filter(Boolean).join(' ') ||
       fullName?.trim() ||
-      (emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1));
+      '';
     const assignedRole = isAdminEmail(email) ? 'ADMIN' : 'CUSTOMER';
 
     const user = await prisma.user.create({
@@ -75,8 +76,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         email,
         passwordHash,
         fullName: derivedFullName,
-        firstName: firstName || derivedFullName.split(' ')[0] || null,
-        lastName: lastName || derivedFullName.split(' ').slice(1).join(' ') || null,
+        firstName: cleanFirstName,
+        lastName: cleanLastName,
         role: assignedRole
       },
       select: {
@@ -659,11 +660,13 @@ export const verifyMagicLink = async (req: Request, res: Response): Promise<void
  */
 export const googleAuth = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { credential, email, fullName, googleId } = req.body;
+    const { credential, email, fullName, firstName: bodyFirstName, lastName: bodyLastName, googleId } = req.body;
 
     let userEmail = email;
-    let userName = fullName || 'Phantom Collector';
     let userGoogleId = googleId;
+    let userFirstName: string | null = bodyFirstName?.trim() || null;
+    let userLastName: string | null = bodyLastName?.trim() || null;
+    let userFullName: string = fullName?.trim() || '';
 
     // If credential JWT was sent by Google One-Tap, decode payload
     if (credential) {
@@ -673,8 +676,10 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
           const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
           if (payload.email) {
             userEmail = payload.email;
-            userName = payload.name || payload.email.split('@')[0];
             userGoogleId = payload.sub || userGoogleId;
+            if (payload.given_name) userFirstName = payload.given_name.trim();
+            if (payload.family_name) userLastName = payload.family_name.trim();
+            if (payload.name) userFullName = payload.name.trim();
           }
         }
       } catch (e) {
@@ -690,6 +695,11 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
     const cleanEmail = userEmail.toLowerCase().trim();
     const assignedRole = isAdminEmail(cleanEmail) ? 'ADMIN' : 'CUSTOMER';
 
+    // Compute derived full name if first or last name exists; DO NOT use email prefix
+    if (!userFullName && (userFirstName || userLastName)) {
+      userFullName = [userFirstName, userLastName].filter(Boolean).join(' ');
+    }
+
     // Find or create user
     let user = await prisma.user.findFirst({
       where: {
@@ -704,7 +714,9 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
       user = await prisma.user.create({
         data: {
           email: cleanEmail,
-          fullName: userName,
+          fullName: userFullName || '',
+          firstName: userFirstName || null,
+          lastName: userLastName || null,
           googleId: userGoogleId || `google_${Date.now()}`,
           role: assignedRole
         }
@@ -713,6 +725,15 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
       const updates: any = {};
       if (userGoogleId && !user.googleId) {
         updates.googleId = userGoogleId;
+      }
+      if (userFirstName && !user.firstName) {
+        updates.firstName = userFirstName;
+      }
+      if (userLastName && !user.lastName) {
+        updates.lastName = userLastName;
+      }
+      if (userFullName && (!user.fullName || user.fullName === 'Phantom Collector')) {
+        updates.fullName = userFullName;
       }
       if (isAdminEmail(cleanEmail) && user.role !== 'ADMIN') {
         updates.role = 'ADMIN';
@@ -742,6 +763,14 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
         id: user.id,
         email: user.email,
         fullName: user.fullName,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+        address: user.address,
+        apartment: user.apartment,
+        city: user.city,
+        postcode: user.postcode,
+        country: user.country,
         role: user.role
       }
     });

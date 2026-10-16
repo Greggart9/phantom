@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowUpRight } from 'lucide-react';
 import { api } from '../../services/api';
+import SEO from '../../components/common/SEO';
 
 import { JOURNAL_ARTICLES, type JournalArticleItem } from '../../data/journalData';
 
@@ -72,6 +73,10 @@ export default function JournalPage() {
 
   return (
     <div className="min-h-screen bg-[#121110] text-[#f4f2ee] selection:bg-neutral-800 selection:text-white">
+      <SEO
+        title="Journal & Atelier Essays"
+        description="Essays on craft, mill visits, material provenance, and design philosophy from Phantom Studio."
+      />
       <main className="pt-16 sm:pt-24 lg:pt-28 pb-20 sm:pb-28 px-6 sm:px-10 lg:px-12 select-none">
         <div className="max-w-[1320px] mx-auto">
           {/* 1. Header Section */}

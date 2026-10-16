@@ -5,60 +5,6 @@ import ProductCard from '../ui/ProductCard';
 import type { ProductItem } from '../../context/StoreContext';
 import { api } from '../../services/api';
 
-const DEFAULT_SEASON_PRODUCTS: ProductItem[] = [
-  {
-    id: 'prod-1',
-    name: 'Halden Wool Overcoat',
-    slug: 'halden-wool-overcoat',
-    price: 680,
-    category: 'OUTERWEAR',
-    badge: 'BESTSELLER',
-    isSoldOut: false,
-    images: [
-      'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=85'
-    ]
-  },
-  {
-    id: 'prod-2',
-    name: 'Hamo Cropped Trench',
-    slug: 'hamo-cropped-trench',
-    price: 520,
-    category: 'OUTERWEAR',
-    badge: 'NEW',
-    isSoldOut: true,
-    images: [
-      'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1000&q=85'
-    ]
-  },
-  {
-    id: 'prod-3',
-    name: 'Quilted Liner Jacket',
-    slug: 'quilted-liner-jacket',
-    price: 390,
-    category: 'OUTERWEAR',
-    isSoldOut: false,
-    images: [
-      'https://images.unsplash.com/photo-1548883354-7622d03aca27?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1000&q=85'
-    ]
-  },
-  {
-    id: 'prod-4',
-    name: 'Merino Chunky Knit',
-    slug: 'merino-chunky-knit',
-    price: 340,
-    category: 'KNITWEAR',
-    badge: 'BESTSELLER',
-    isSoldOut: false,
-    images: [
-      'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&w=1000&q=85'
-    ]
-  }
-];
-
 interface ProductSectionProps {
   products?: ProductItem[];
   className?: string;
@@ -68,21 +14,22 @@ export default function ProductSection({
   products: initialProducts,
   className = ''
 }: ProductSectionProps) {
-  const [items, setItems] = useState<ProductItem[]>(
-    initialProducts || DEFAULT_SEASON_PRODUCTS
-  );
+  const [items, setItems] = useState<ProductItem[]>(initialProducts || []);
+  const [loading, setLoading] = useState(!initialProducts);
 
   useEffect(() => {
     if (initialProducts) return;
 
     let isMounted = true;
+    setLoading(true);
+
     api
       .get('/products?limit=4')
       .then((res: any) => {
         if (!isMounted) return;
         const fetched = res.data?.products;
         if (Array.isArray(fetched) && fetched.length > 0) {
-          const mapped: ProductItem[] = fetched.map((item: any, idx: number) => ({
+          const mapped: ProductItem[] = fetched.map((item: any) => ({
             id: item.id,
             name: item.title,
             slug: item.slug,
@@ -92,22 +39,23 @@ export default function ProductSection({
             badge: item.badge || (item.stockQuantity > 0 && item.stockQuantity < 10 ? 'LIMITED' : undefined),
             stockQuantity: item.stockQuantity,
             isSoldOut: item.stockQuantity <= 0 || item.badge === 'SOLD OUT',
-            images:
-              Array.isArray(item.images) && item.images.length > 0
-                ? item.images
-                : DEFAULT_SEASON_PRODUCTS[idx % DEFAULT_SEASON_PRODUCTS.length].images
+            images: Array.isArray(item.images) && item.images.length > 0 ? item.images : []
           }));
           setItems(mapped);
         }
       })
-      .catch(() => {
-        // Fallback to default season pieces
+      .catch((err) => {
+        console.error('Failed to load season products:', err);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
       });
 
     return () => {
       isMounted = false;
     };
   }, [initialProducts]);
+
   return (
     <section className={`w-full bg-[#121110] py-16 sm:py-20 lg:py-24 px-6 sm:px-10 lg:px-12 ${className}`}>
       <div className="max-w-[1320px] mx-auto">
@@ -138,23 +86,36 @@ export default function ProductSection({
           </div>
         </motion.div>
 
-        {/* Product Cards Grid: 4 columns on large screens with staggered entrance */}
+        {/* Product Cards Grid: 4 columns on large screens */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-7">
-          {items.map((product, idx) => (
-            <motion.div
-              key={product.id}
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-40px' }}
-              transition={{
-                duration: 0.65,
-                delay: idx * 0.08,
-                ease: [0.16, 1, 0.3, 1]
-              }}
-            >
-              <ProductCard product={product} />
-            </motion.div>
-          ))}
+          {loading ? (
+            Array.from({ length: 4 }).map((_, idx) => (
+              <div key={idx} className="animate-pulse space-y-3">
+                <div className="aspect-[3/4] bg-[#161514] rounded-sm" />
+                <div className="space-y-2 pt-1">
+                  <div className="h-3 w-1/3 bg-neutral-800/60 rounded" />
+                  <div className="h-4 w-4/5 bg-neutral-800/80 rounded" />
+                  <div className="h-4 w-1/4 bg-neutral-800/60 rounded" />
+                </div>
+              </div>
+            ))
+          ) : (
+            items.map((product, idx) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, y: 28 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{
+                  duration: 0.65,
+                  delay: idx * 0.08,
+                  ease: [0.16, 1, 0.3, 1]
+                }}
+              >
+                <ProductCard product={product} />
+              </motion.div>
+            ))
+          )}
         </div>
       </div>
     </section>

@@ -5,7 +5,8 @@ import {
   getMyOrders,
   getOrderById,
   getAdminOrders,
-  updateOrderStatus
+  updateOrderStatus,
+  deleteOrder
 } from '../controllers/order.controller';
 import { requireAuth, requireAdmin } from '../middlewares/auth.middleware';
 
@@ -20,5 +21,8 @@ router.get('/:id', requireAuth, getOrderById);
 // Admin-only order management routes
 router.get('/admin/all', requireAdmin, getAdminOrders);
 router.patch('/admin/:id/status', requireAdmin, updateOrderStatus);
+router.delete('/admin/:id', requireAdmin, deleteOrder);
+router.delete('/:id', requireAdmin, deleteOrder);
 
 export default router;
+

@@ -14,7 +14,8 @@ import {
   Menu,
   X,
   Shield,
-  Layers
+  Layers,
+  Users
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { name: 'Collections', path: '/admin/collections', icon: FolderKanban },
   { name: 'Categories', path: '/admin/categories', icon: Tag },
   { name: 'Orders', path: '/admin/orders', icon: ShoppingBag },
+  { name: 'Users', path: '/admin/users', icon: Users },
   { name: 'Reviews', path: '/admin/reviews', icon: MessageSquare },
   { name: 'Journal', path: '/admin/journal', icon: BookOpen }
 ];

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import SEO from '../../components/common/SEO';
 
 interface FaqSection {
   title: string;
@@ -55,6 +56,10 @@ export default function ShippingAndReturnsPage() {
 
   return (
     <div className="min-h-screen bg-[#11100f] text-[#f4f2ee] select-none py-14 sm:py-20 lg:py-24 px-6 sm:px-10 lg:px-16 selection:bg-neutral-800 selection:text-white">
+      <SEO
+        title="Worldwide Shipping & Returns"
+        description="Complimentary express shipping on orders over $300. Seamless 30-day archival returns."
+      />
       <div className="max-w-[1320px] mx-auto">
         {/* ========================================================= */}
         {/* TOP HEADER: Left-aligned to the screen / container        */}

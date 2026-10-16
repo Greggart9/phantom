@@ -37,6 +37,7 @@ const CategoriesPage = lazy(() => import('./pages/admin/CategoriesPage'));
 const CollectionsAdminPage = lazy(() => import('./pages/admin/CollectionsPage'));
 const ReviewsPage = lazy(() => import('./pages/admin/ReviewsPage'));
 const JournalAdminPage = lazy(() => import('./pages/admin/JournalPage'));
+const UsersAdminPage = lazy(() => import('./pages/admin/UsersPage'));
 
 function App() {
   return (
@@ -56,6 +57,7 @@ function App() {
                     <Route path="products/new" element={<ProductFormPage />} />
                     <Route path="products/:id/edit" element={<ProductFormPage />} />
                     <Route path="orders" element={<OrdersAdminPage />} />
+                    <Route path="users" element={<UsersAdminPage />} />
                     <Route path="categories" element={<CategoriesPage />} />
                     <Route path="collections" element={<CollectionsAdminPage />} />
                     <Route path="reviews" element={<ReviewsPage />} />

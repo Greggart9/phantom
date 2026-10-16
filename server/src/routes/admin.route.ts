@@ -4,6 +4,7 @@ import {
   getAdminOverview,
   getAdminOrders,
   updateAdminOrderStatus,
+  deleteAdminOrder,
   getAdminReviews,
   toggleReviewApproval,
   deleteReview,
@@ -18,7 +19,9 @@ import {
   getAdminCollections,
   createAdminCollection,
   updateAdminCollection,
-  deleteAdminCollection
+  deleteAdminCollection,
+  getAdminUsers,
+  deleteAdminUser
 } from '../controllers/admin.controller';
 
 const router = Router();
@@ -29,9 +32,14 @@ router.use(requireAdmin);
 // Overview / Analytics
 router.get('/overview', getAdminOverview);
 
+// Users Management
+router.get('/users', getAdminUsers);
+router.delete('/users/:id', deleteAdminUser);
+
 // Orders & Fulfillment
 router.get('/orders', getAdminOrders);
 router.put('/orders/:id/status', updateAdminOrderStatus);
+router.delete('/orders/:id', deleteAdminOrder);
 
 // Reviews Moderation
 router.get('/reviews', getAdminReviews);

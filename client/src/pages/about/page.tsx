@@ -2,22 +2,23 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowUpRight } from 'lucide-react';
+import SEO from '../../components/common/SEO';
 
 const TEAM_MEMBERS = [
   {
     name: 'Ines Karlsson',
     role: 'FOUNDER & PATTERN',
-    imageUrl: '/images/about/team-ines.jpg'
+    imageUrl: 'https://res.cloudinary.com/degearesj/image/upload/v1792109981/asset5_1_swgwd7.jpg'
   },
   {
     name: 'Tomas Reiner',
     role: 'KNITWEAR & REPAIRS',
-    imageUrl: '/images/about/team-tomas.jpg'
+    imageUrl: 'https://res.cloudinary.com/degearesj/image/upload/v1792109982/asset3_4_kbwoxd.jpg'
   },
   {
     name: 'Aurélie Dumas',
     role: 'LEATHER & FINISHING',
-    imageUrl: '/images/about/team-aurelie.jpg'
+    imageUrl: 'https://res.cloudinary.com/degearesj/image/upload/v1792109982/asset4_3_nlosjq.jpg'
   }
 ];
 
@@ -50,6 +51,10 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen bg-[#121110] text-[#f4f2ee] selection:bg-neutral-800 selection:text-white">
+      <SEO
+        title="Atelier Heritage & Craft"
+        description="Discover Phantom's craft ethos, European mill partnerships, and lifetime care commitment."
+      />
       <main className="pt-16 sm:pt-24 lg:pt-28 pb-24 sm:pb-32 px-6 sm:px-10 lg:px-12 select-none">
         <div className="max-w-[1320px] mx-auto">
           {/* 1. Top Section: The Studio Header */}
@@ -81,7 +86,7 @@ export default function AboutPage() {
             className="relative w-full max-w-[1320px] mx-auto aspect-[1320/776] lg:h-[776px] overflow-hidden bg-neutral-900 shadow-2xl mb-20 sm:mb-28"
           >
             <img
-              src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1600&q=85"
+              src="https://res.cloudinary.com/degearesj/image/upload/v1792109982/asset2_4_ixhcxb.jpg"
               alt="Weaving loom in Phantom mill"
               width={1320}
               height={776}

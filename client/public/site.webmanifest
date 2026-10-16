@@ -1,0 +1,17 @@
+{
+  "name": "PHANTOM Atelier & Fine Goods",
+  "short_name": "PHANTOM",
+  "description": "Considered archival essentials and limited-run leather goods crafted with historic European mills and tanneries.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0c0b",
+  "theme_color": "#0d0c0b",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "64x64 128x128 256x256 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

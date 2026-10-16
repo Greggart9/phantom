@@ -20,13 +20,8 @@ import {
 import api from '../../services/api';
 import { useStore } from '../../context/StoreContext';
 import { useAuth } from '../../context/AuthContext';
-import {
-  ALL_PRODUCTS,
-  getProductBySlug,
-  getProductStory,
-  YOU_MAY_ALSO_LIKE_PRODUCTS
-} from '../../data/products';
 import ProductCard from '../../components/ui/ProductCard';
+import SEO from '../../components/common/SEO';
 
 // Normalization helper to bridge backend database models and storefront UI
 function normalizeProduct(p: any) {
@@ -67,6 +62,21 @@ function normalizeProduct(p: any) {
   };
 }
 
+// Helper: generate editorial provenance for database garments
+function getProductStory(p: any): string[] {
+  if (p?.aboutStory && Array.isArray(p.aboutStory) && p.aboutStory.length > 0) {
+    return p.aboutStory;
+  }
+  if (p?.storyParagraphs && Array.isArray(p.storyParagraphs) && p.storyParagraphs.length > 0) {
+    return p.storyParagraphs;
+  }
+  const displayName = p?.name || p?.title || 'Piece';
+  return [
+    `The ${displayName} is one of our defining Phantom designs, developed with uncompromising attention to form, proportion, and tactile comfort. Every seam is finished by hand using organic natural fibers that drape effortlessly.`,
+    `Engineered for versatile everyday wear and longevity. Finished with custom detailing and sourced through responsible, traceable production partners in Europe.`
+  ];
+}
+
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -75,32 +85,168 @@ export default function ProductDetailPage() {
   const isAdmin = Boolean(isAuthenticated && user?.role === 'ADMIN');
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Find product by slug with dynamic database fallback
-  const fallbackProduct = normalizeProduct(slug ? getProductBySlug(slug) : ALL_PRODUCTS[0]);
-  const [liveProduct, setLiveProduct] = useState<any>(fallbackProduct || null);
+  // Industry-standard database state
+  const [product, setProduct] = useState<any | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<boolean>(false);
+  const [recommendedProducts, setRecommendedProducts] = useState<any[]>([]);
 
+  // Selection states
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
+  const [openAccordion, setOpenAccordion] = useState<string | null>('materials');
+
+  // Reset selection on slug change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    setActiveImageIndex(0);
+    setSelectedColor(null);
+    setSelectedSize(null);
+    setQuantity(1);
+  }, [slug]);
+
+  // Primary live database fetch
   useEffect(() => {
     if (!slug) return;
     let isMounted = true;
+    setLoading(true);
+    setError(false);
 
     api.get(`/products/${slug}`)
       .then((res: any) => {
         if (!isMounted) return;
         if (res.data?.success && res.data.product) {
-          setLiveProduct(normalizeProduct(res.data.product));
+          setProduct(normalizeProduct(res.data.product));
+        } else {
+          setError(true);
         }
       })
       .catch(() => {
         if (!isMounted) return;
-        setLiveProduct(fallbackProduct);
+        setError(true);
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setLoading(false);
       });
+
+    // Fetch related recommendations from live database
+    api.get('/products?limit=8')
+      .then((res: any) => {
+        if (!isMounted) return;
+        if (res.data?.products && Array.isArray(res.data.products)) {
+          const recs = res.data.products
+            .filter((p: any) => p.slug !== slug)
+            .slice(0, 4)
+            .map((p: any) => ({
+              id: p.id,
+              name: p.title || p.name,
+              title: p.title || p.name,
+              slug: p.slug,
+              price: Number(p.price || 0),
+              originalPrice: p.originalPrice ? Number(p.originalPrice) : null,
+              category: typeof p.category === 'object' ? p.category?.name : p.category,
+              badge: p.badge,
+              images: p.images || []
+            }));
+          setRecommendedProducts(recs);
+        }
+      })
+      .catch(() => {});
 
     return () => {
       isMounted = false;
     };
   }, [slug]);
 
-  const product = liveProduct || fallbackProduct || normalizeProduct(ALL_PRODUCTS[0]);
+  // 1. Loading Skeleton (Industry Standard: Zero layout shift)
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#11100f] text-[#f4f2ee] select-none">
+        <div className="max-w-[1360px] mx-auto py-8 sm:py-12 lg:py-16 px-4 sm:px-8 lg:px-12 animate-pulse">
+          {/* Breadcrumb Skeleton */}
+          <div className="h-4 w-36 bg-neutral-800/60 rounded mb-8 sm:mb-10" />
+
+          {/* Main 2-Column Grid */}
+          <div className="flex flex-col lg:flex-row items-start justify-center gap-10 xl:gap-14">
+            {/* Left: Gallery Skeleton (768px by 960px) */}
+            <div className="w-full max-w-[768px] lg:w-[768px] aspect-[768/960] lg:h-[960px] bg-[#161514] rounded-sm" />
+
+            {/* Right: Info Skeleton */}
+            <div className="w-full max-w-[500px] flex flex-col gap-6 pt-2">
+              <div className="space-y-3">
+                <div className="h-3 w-20 bg-neutral-800/80 rounded" />
+                <div className="h-8 w-4/5 bg-neutral-800/80 rounded" />
+                <div className="h-6 w-28 bg-neutral-800/80 rounded" />
+              </div>
+
+              {/* Color swatches skeleton */}
+              <div className="space-y-2 pt-4">
+                <div className="h-3 w-24 bg-neutral-800/60 rounded" />
+                <div className="flex gap-2">
+                  <div className="w-9 h-9 rounded-full bg-neutral-800/80" />
+                  <div className="w-9 h-9 rounded-full bg-neutral-800/80" />
+                  <div className="w-9 h-9 rounded-full bg-neutral-800/80" />
+                </div>
+              </div>
+
+              {/* Size buttons skeleton */}
+              <div className="space-y-2 pt-2">
+                <div className="h-3 w-20 bg-neutral-800/60 rounded" />
+                <div className="flex gap-2">
+                  <div className="w-12 h-10 bg-neutral-800/80 rounded" />
+                  <div className="w-12 h-10 bg-neutral-800/80 rounded" />
+                  <div className="w-12 h-10 bg-neutral-800/80 rounded" />
+                  <div className="w-12 h-10 bg-neutral-800/80 rounded" />
+                </div>
+              </div>
+
+              {/* CTA buttons skeleton */}
+              <div className="space-y-3 pt-4">
+                <div className="h-12 w-full bg-neutral-800/90 rounded" />
+                <div className="h-12 w-full bg-neutral-900 border border-neutral-800 rounded" />
+              </div>
+
+              {/* Perks skeleton */}
+              <div className="space-y-3 pt-4">
+                <div className="h-4 w-3/4 bg-neutral-800/40 rounded" />
+                <div className="h-4 w-2/3 bg-neutral-800/40 rounded" />
+                <div className="h-4 w-3/5 bg-neutral-800/40 rounded" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. 404 / Archived State
+  if (error || !product) {
+    return (
+      <div className="min-h-[70vh] bg-[#11100f] text-[#f4f2ee] flex flex-col items-center justify-center px-6 py-20 text-center">
+        <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-400 mb-3 font-mono">
+          Phantom Archive
+        </p>
+        <h1 className="text-3xl sm:text-4xl font-normal tracking-tight text-white mb-4">
+          Piece Not Found
+        </h1>
+        <p className="text-xs sm:text-sm text-neutral-400 max-w-md mb-8 leading-relaxed">
+          The requested edition does not exist in our catalog or may have been retired to our private archives.
+        </p>
+        <Link
+          to="/shop"
+          className="px-8 py-3.5 bg-white text-neutral-950 text-xs font-bold tracking-[0.2em] uppercase hover:bg-neutral-200 transition-colors"
+        >
+          BROWSE CURRENT EDITIONS
+        </Link>
+      </div>
+    );
+  }
+
+  // Guaranteed product properties
   const isSoldOut =
     Boolean(product.isSoldOut) ||
     (product.stockQuantity !== undefined && product.stockQuantity <= 0) ||
@@ -114,10 +260,7 @@ export default function ProductDetailPage() {
       : null;
 
   // Dynamic story & specification helpers
-  const storyParagraphs =
-    product.storyParagraphs && product.storyParagraphs.length > 0
-      ? product.storyParagraphs
-      : getProductStory(product);
+  const storyParagraphs = getProductStory(product);
 
   // Compute full luxury specifications adhering to Phantom design standards:
   // 1. MATERIAL
@@ -227,24 +370,6 @@ export default function ProductDetailPage() {
   const specEntries = computeProductSpecs();
   const hasRepairsGuarantee = specEntries.some(([k]) => k === 'REPAIRS');
 
-  // Component states
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState(1);
-  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
-
-  // Accordion open states
-  const [openAccordion, setOpenAccordion] = useState<string | null>('materials');
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
-    setActiveImageIndex(0);
-    setSelectedColor(null);
-    setSelectedSize(null);
-    setQuantity(1);
-  }, [slug]);
-
   const images = Array.isArray(product.images) && product.images.length > 0 ? product.images : [
     'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=1200&q=85'
   ];
@@ -284,28 +409,6 @@ export default function ProductDetailPage() {
     if (hasColor && !hasSize) return 'SELECT A SIZE FIRST';
     return 'ADD TO BAG';
   };
-
-  if (!product) {
-    return (
-      <div className="min-h-[70vh] bg-[#11100f] text-[#f4f2ee] flex flex-col items-center justify-center px-6 py-20 text-center">
-        <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-400 mb-3">
-          Phantom Archive
-        </p>
-        <h1 className="text-3xl sm:text-4xl font-normal tracking-tight text-white mb-4">
-          Piece Not Found
-        </h1>
-        <p className="text-xs sm:text-sm text-neutral-400 max-w-md mb-8 leading-relaxed">
-          The requested edition does not exist in our catalog or may have been retired to our private archives.
-        </p>
-        <Link
-          to="/shop"
-          className="px-8 py-3.5 bg-white text-neutral-950 text-xs font-bold tracking-[0.2em] uppercase hover:bg-neutral-200 transition-colors"
-        >
-          BROWSE CURRENT EDITIONS
-        </Link>
-      </div>
-    );
-  }
 
   // Actions
   const handleAddToBag = () => {
@@ -368,6 +471,34 @@ export default function ProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#11100f] text-[#f4f2ee] select-none selection:bg-neutral-800 selection:text-white">
+      <SEO
+        title={product.title || product.name}
+        description={product.description || `${product.title || product.name} — limited archival release by Phantom Atelier.`}
+        image={images[0]}
+        type="product"
+        schema={{
+          '@context': 'https://schema.org',
+          '@type': 'Product',
+          name: product.title || product.name,
+          image: images,
+          description: product.description,
+          brand: {
+            '@type': 'Brand',
+            name: 'PHANTOM'
+          },
+          offers: {
+            '@type': 'Offer',
+            url: `https://phantom.oluwadamilare.xyz/product/${product.slug || product.id}`,
+            priceCurrency: 'USD',
+            price: Number(product.price),
+            availability: isSoldOut ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock',
+            seller: {
+              '@type': 'Organization',
+              name: 'PHANTOM'
+            }
+          }
+        }}
+      />
       <div className="max-w-[1360px] mx-auto py-8 sm:py-12 lg:py-16 px-4 sm:px-8 lg:px-12">
         {/* ========================================================= */}
         {/* TOP BREADCRUMB: SHOP › CATEGORY                           */}
@@ -487,9 +618,7 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          {/* ======================================================= */}
           {/* RIGHT: DETAILS (480px by 1032px)                        */}
-          {/* ======================================================= */}
           <div className="w-full max-w-[480px] lg:w-[480px] shrink-0 lg:min-h-[1032px] flex flex-col space-y-7 sm:space-y-8">
             {/* Category Tag & Badges */}
             <div className="flex items-center justify-between">
@@ -944,26 +1073,25 @@ export default function ProductDetailPage() {
         </div>
       </section>
 
-      {/* ========================================================= */}
-      {/* SECTION: YOU MAY ALSO LIKE                                */}
-      {/* ========================================================= */}
-      <section className="w-full bg-[#11100f] py-16 sm:py-24">
-        <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12">
-          <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-normal tracking-tight text-white mb-10 sm:mb-12">
-            You may also like
-          </h2>
+      {recommendedProducts.length > 0 && (
+        <section className="w-full bg-[#11100f] py-16 sm:py-24">
+          <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12">
+            <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-normal tracking-tight text-white mb-10 sm:mb-12">
+              You may also like
+            </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-6">
-            {YOU_MAY_ALSO_LIKE_PRODUCTS.map((recProduct) => (
-              <ProductCard
-                key={recProduct.id}
-                product={recProduct}
-                imageClassName="aspect-[4/5]"
-              />
-            ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-6">
+              {recommendedProducts.map((recProduct) => (
+                <ProductCard
+                  key={recProduct.id}
+                  product={recProduct}
+                  imageClassName="aspect-[4/5]"
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* =========================================================== */}
       {/* SIZE GUIDE MODAL                                            */}

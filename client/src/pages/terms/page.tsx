@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import SEO from '../../components/common/SEO';
 
 interface TermsSection {
   title: string;
@@ -52,6 +53,10 @@ export default function TermsOfServicePage() {
 
   return (
     <div className="min-h-screen bg-[#11100f] text-[#f4f2ee] select-none py-14 sm:py-20 lg:py-24 px-6 sm:px-10 lg:px-16 selection:bg-neutral-800 selection:text-white">
+      <SEO
+        title="Terms of Service"
+        description="The agreement between you and Phantom Studio, Lda. when purchasing fine goods from this site."
+      />
       <div className="max-w-[1320px] mx-auto">
         {/* ========================================================= */}
         {/* TOP HEADER: Left-aligned to the screen / container        */}

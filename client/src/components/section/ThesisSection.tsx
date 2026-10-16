@@ -63,7 +63,7 @@ export default function ThesisSection() {
           >
             <div className="relative w-full max-w-[616px] lg:w-[616px] lg:h-[620px] aspect-[616/620] overflow-hidden bg-neutral-900 shadow-2xl">
               <img
-                src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1400&q=85"
+                src="https://res.cloudinary.com/degearesj/image/upload/v1792109273/asset5_wcrog3.jpg"
                 alt="Phantom Cutting Table and Clothes Rack"
                 width={616}
                 height={620}

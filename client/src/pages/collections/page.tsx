@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowUpRight } from 'lucide-react';
 import { api } from '../../services/api';
+import SEO from '../../components/common/SEO';
 
 export interface CollectionItem {
   id: string;
@@ -102,6 +103,10 @@ export default function CollectionsPage() {
 
   return (
     <div className="min-h-screen bg-[#121110] text-[#f4f2ee] selection:bg-neutral-800 selection:text-white">
+      <SEO
+        title="Editions & Collections"
+        description="Archival lookbooks, seasonal capsules, and atelier craftsmanship notes from Phantom Studio."
+      />
       {/* 1. Header Section matching reference screenshot */}
       <section className="pt-16 sm:pt-24 lg:pt-28 pb-16 sm:pb-24 px-6 sm:px-10 lg:px-12 select-none">
         <div className="max-w-[1320px] mx-auto">
